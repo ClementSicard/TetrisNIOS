@@ -320,3 +320,37 @@ DRAW_Ay:                        ; address of shape arrays, y_axis
     .word L_E_Y
     .word L_So_Y
     .word L_W_Y
+
+
+
+
+; BEGIN:clear_leds
+clear_leds:
+	stw zero, LEDS (zero) ; 0 -> 3
+	stw zero, LEDS + 4 (zero) ; 4 -> 7
+	stw zero, LEDS + 8 (zero) ; 8 -> 11
+	ret
+; END:clear_leds
+
+
+; BEGIN:set_pixel
+set_pixel:
+	; Initialize registers
+	addi a0, zero, 0
+	addi a1, zero, 0
+	addi t0, zero, 0
+	addi t1, zero, 0
+	addi t2, zero, 0
+	addi t3, zero, 1
+
+	; a0 = x, a1 = y
+	srli t0, a0, 2 		; t0 = x/4 --> LED[0, 1 ou 2]
+	slli t0, t0, 2 		; t0 = LED + t0 * 4
+	slli t1, a0, 3		; t1 = 8 * a0
+	add t1, t1, a1		; t1 = t1 + a1
+	andi t1, t1, 0x1F	; t1 = t1 % 32
+	sll  t3, t3, t1
+	addi t2, t0, LED	; t2 = LED + t0
+	stw t3, 0 (t2)
+	ret
+; END:set_pixel
