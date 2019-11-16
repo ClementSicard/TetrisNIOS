@@ -336,8 +336,8 @@ clear_leds:
 ; BEGIN:set_pixel
 set_pixel:
 	; Initialize registers
-	addi a0, zero, 0
-	addi a1, zero, 0
+	addi a0, zero, 0 ; this gets passed from outside
+	addi a1, zero, 0 ; this gets passed from outside
 	addi t0, zero, 0
 	addi t1, zero, 0
 	addi t2, zero, 0
@@ -354,3 +354,84 @@ set_pixel:
 	stw t3, 0 (t2)
 	ret
 ; END:set_pixel
+
+; BEGIN:wait
+	addi t0, zero, 1
+	slli t0, t0, 20
+	loop: 
+		beq t0, zero, done
+		addi t0, t0, -1
+		call loop
+	done:
+		ret
+; END:wait
+
+; BEGIN:in_gsa
+	add t0, zero, a0 ; x
+	add t1, zero, a1 ; y
+	cmpgei t2, t0, 12
+	bne t2, zero, retOne
+	cmpgei t2, t1, 8
+	bne t2, zero, retOne
+	cmplti t2, t0, 0
+	bne t2, zero, retOne
+	cmplti t2, t1, 0
+	bne t2, zero, retOne
+	addi v0, zero, 0
+	ret
+	retOne:
+		addi v0, zero, 1
+		ret 
+;END:in_gsa
+
+;BEGIN:get_gsa
+	add t0, zero, a0 ; x
+	add t1, zero, a1 ; y
+	slli t0, t0, 3 ; 8x
+	add t0, t0, t1 ; 8x + y
+	slli t0, t0, 2 ; (8x + y)* 4
+	ldw v0, GSA(t0)
+	ret
+;END:get_gsa
+
+;BEGIN:set_gsa
+	add t0, zero, a0 ; x
+	add t1, zero, a1 ; y
+	slli t0, t0, 3 ; 8x
+	add t0, t0, t1 ; 8x + y
+	slli t0, t0, 2 ; (8x + y)* 4
+	stw a2, GSA (t0)
+	ret
+;END:set_gsa
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
