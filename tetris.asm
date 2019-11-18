@@ -350,7 +350,7 @@ set_pixel:
 	add t1, t1, a1		; t1 = t1 + a1
 	andi t1, t1, 0x1F	; t1 = t1 % 32
 	sll  t3, t3, t1
-	addi t2, t0, LED	; t2 = LED + t0
+	addi t2, t0, LEDS	; t2 = LED + t0
 	stw t3, 0 (t2)
 	ret
 ; END:set_pixel
