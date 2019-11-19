@@ -322,6 +322,14 @@ DRAW_Ay:                        ; address of shape arrays, y_axis
     .word L_W_Y
 
 
+;BEGIN:main
+main:
+	call clear_leds
+	addi a0, zero, 0
+	addi a1, zero, 0
+	call set_pixel
+;END:main
+
 
 
 ; BEGIN:clear_leds
@@ -356,6 +364,7 @@ set_pixel:
 ; END:set_pixel
 
 ; BEGIN:wait
+wait:
 	addi t0, zero, 1
 	slli t0, t0, 20
 	loop: 
@@ -367,6 +376,7 @@ set_pixel:
 ; END:wait
 
 ; BEGIN:in_gsa
+in_gsa:
 	add t0, zero, a0 ; x
 	add t1, zero, a1 ; y
 	cmpgei t2, t0, 12
@@ -385,6 +395,7 @@ set_pixel:
 ;END:in_gsa
 
 ;BEGIN:get_gsa
+get_gsa:
 	add t0, zero, a0 ; x
 	add t1, zero, a1 ; y
 	slli t0, t0, 3 ; 8x
@@ -395,6 +406,7 @@ set_pixel:
 ;END:get_gsa
 
 ;BEGIN:set_gsa
+set_gsa:
 	add t0, zero, a0 ; x
 	add t1, zero, a1 ; y
 	slli t0, t0, 3 ; 8x
@@ -403,6 +415,9 @@ set_pixel:
 	stw a2, GSA (t0)
 	ret
 ;END:set_gsa
+
+
+
 
 
 
