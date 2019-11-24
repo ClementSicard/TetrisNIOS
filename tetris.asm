@@ -300,31 +300,91 @@ rotate_tetromino:
 	beq a0, s1, right
 	addi s1, zero, rotL
 	beq a0, s1, left
-	jmpi next
+	jmpi end_rot
 
 	right:
 		addi s0, s0, 1
 		andi s0, s0, 0x3		; s0 = s0 mod 4
 		stw s0, T_orientation(zero)
-		jmpi next
+		jmpi end_rot
 	left:
 		addi s0, s0, -1
 		andi s0, s0, 0x3		; s0 = s0 mod 4
 		stw s0, T_orientation(zero)
-		jmpi next
-	next:
+		jmpi end_rot
+	end_rot:
 		ldw s0, 0(sp)
-		ldw s1, 0(sp)
+		ldw s1, 4(sp)
 		addi sp, sp, 8
 		ret
 ;END:rotate_tetromino
 
 ;BEGIN:act
 act:
+	addi sp, sp, -12
+	stw s0, 0(sp)
+	stw s1, 4(sp)
+	stw a0, 8(sp)
+
+	addi s0, zero, moveL
+	beq a0, s0, mL
+	addi s0, zero, moveR
+	beq a0, s0, mR
+	addi s0, zero, moveD
+	beq a0, s0, mD
+	addi s0, zero, rotL
+	beq a0, s0, rot
+	addi s0, zero, rotR
+	beq a0, s0, rot
+	addi s0, zero, reset
+	beq a0, s0, res
+
+	mL:
+		; if no collision (TODO)
+		ldw s0, T_X(zero)
+		addi s0, s0, -1
+		stw s0, T_X(zero)
+		jmpi end_act
+	mR:
+		; if no collision (TODO)
+		ldw s0, T_X(zero)
+		addi s0, s0, 1
+		stw s0, T_X(zero)
+		jmpi end_act
+	mD:
+		; if no collision (TODO)
+		ldw s0, T_Y(zero)
+		addi s0, s0, 1
+		stw s0, T_Y(zero)
+		jmpi end_act
+	rot:
+		call rotate_tetromino
+		addi a0, zero, OVERLAP
+		check_overlap:
+			; Check for OVERLAP collision
+			call detect_collision
+			
+		jmpi end_act
+
+	res:
+		call reset_game
 	
-	
-	
+	end_act:
+		ldw s0, 0(sp)
+		ldw s1, 4(sp)
+		ldw a0, 8(sp)
+		addi sp, sp, 12
 ;END:act
+
+
+
+
+;BEGIN:reset_game
+reset_game:
+
+
+
+;END:reset_game
 
 C_N_X:
   .word 0x00
