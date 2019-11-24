@@ -71,11 +71,16 @@ main:
 	addi sp, zero, LEDS
 	addi t0, zero, 6
 	addi t1, zero, 1
+	addi t2, zero, 4
+	addi t3, zero, 1
+	
 	stw t0, T_X(zero)
 	stw t1, T_Y(zero)
-	stw zero, T_type(zero)
-	stw zero, T_orientation(zero)
+	stw t2, T_type(zero)
+	stw t3, T_orientation(zero)
+	addi a0, zero, 2
 	call draw_tetromino
+	call draw_gsa
 	ret
 ;END:main
 
@@ -88,7 +93,6 @@ clear_leds:
 	stw zero, LEDS + 8 (zero) ; 8 -> 11
 	ret
 ; END:clear_leds
-
 
 ; BEGIN:set_pixel
 set_pixel:
@@ -206,6 +210,9 @@ draw_gsa:
 ; BEGIN:draw_tetromino
 draw_tetromino: ; need to take into account a0 now sets activates only tetremino
 	addi sp, sp, -4
+	stw ra, 0(sp)
+	
+	addi sp, sp, -4
 	stw s0, 0(sp)
 	
 	addi sp, sp, -4
@@ -214,6 +221,7 @@ draw_tetromino: ; need to take into account a0 now sets activates only tetremino
 	addi sp, sp, -4
 	stw s2, 0(sp)
 
+	add a2, zero, a0 ; gives a a2 the value passed to draw_tetromino
 	ldw s0, T_X(zero)
 	ldw s1, T_Y(zero)
 	ldw t2, T_orientation(zero)
@@ -223,36 +231,78 @@ draw_tetromino: ; need to take into account a0 now sets activates only tetremino
 	add t2, t2, t3; Type*16+ orientation * 4
 	
 	ldw t3, DRAW_Ax(t2) ; gets address of shape from DRAW_Ax/DRAW_Ay
-	ldw t4, 0(t3) ; loads x offsets A1
-	ldw t5, 4(t3) ; A2
-	ldw t6, 8(t3) ; A3
-
 	ldw t7, DRAW_Ay(t2) ; loads y offsets
-	ldw t0, 0(t3) ; B1
-	ldw t1, 4(t3) ; B2
-	ldw s2, 8(t3) ; B3
-	
+
 	add a0, zero, s0
 	add a1, zero, s1
-	call set_pixel
 	
+	addi sp, sp, -12
+	stw t2, -8(sp)
+	stw t3, -4(sp)
+	stw t7, 0(sp)	
+
+	call set_gsa
+
+	ldw t7, 0(sp)
+	ldw t3, -4(sp)
+	ldw t2, -8(sp)
+	addi sp, sp, 12
+
+	ldw t4, 0(t3) ; loads x offsets A1
+	ldw t0, 0(t7) ; B1
 	add t4, t4, s0
 	add t0, t0, s1
 	add a0, zero, t4
 	add a1, zero, t0
-	call set_pixel
+
+	addi sp, sp, -12
+	stw t2, -8(sp)
+	stw t3, -4(sp)
+	stw t7, 0(sp)
 	
+	call set_gsa
+
+	ldw t7, 0(sp)
+	ldw t3, -4(sp)
+	ldw t2, -8(sp)
+	addi sp, sp, 12
+
+	ldw t5, 4(t3) ; A2
+	ldw t1, 4(t7) ; B2
 	add t5, t5, s0
 	add t1, t1, s1
 	add a0, t5, zero
 	add a1, t1, zero
-	call set_pixel
+
+	addi sp, sp, -12
+	stw t2, -8(sp)
+	stw t3, -4(sp)
+	stw t7, 0(sp)
+
+	call set_gsa
+	ldw t7, 0(sp)
+	ldw t3, -4(sp)
+	ldw t2, -8(sp)
+	addi sp, sp, 12
+
+	ldw t6, 8(t3) ; A3
+	ldw s2, 8(t7) ; B3
 	
 	add t6, t6, s0
 	add s2, s2, s1
 	add a0, zero, t6
 	add a1, zero, s2
-	call set_pixel
+
+	addi sp, sp, -12
+	stw t2, -8(sp)
+	stw t3, -4(sp)
+	stw t7, 0(sp)
+
+	call set_gsa
+	ldw t7, 0(sp)
+	ldw t3, -4(sp)
+	ldw t2, -8(sp)
+	addi sp, sp, 12
 
 	ldw s2, 0(sp)
 	addi sp, sp, 4
@@ -261,6 +311,9 @@ draw_tetromino: ; need to take into account a0 now sets activates only tetremino
 	addi sp, sp, 4
 	
 	ldw s0, 0(sp)
+	addi sp, sp, 4
+
+	ldw ra, 0(sp)
 	addi sp, sp, 4
 	ret
 ;END:draw_tetromino
