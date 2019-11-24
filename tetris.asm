@@ -255,6 +255,77 @@ draw_tetromino: ; need to take into account a0 now sets activates only tetremino
 	addi sp, sp, 4
 ;END:draw_tetromino
 
+
+;BEGIN:generate_tetromino
+generate_tetromino:
+	addi sp, sp, -12
+	stw s0, 0(sp)			; save callee-saved registers to stack
+	stw s1, 4(sp)
+	stw s2, 8(sp)			; x anchor point
+	
+	addi s1, zero, 5	
+
+	rand:
+		ldw s0, RANDOM_NUM(zero)	; read from RANDOM_NUM generator
+		andi s0, s0, 0x0007		; mask s0 to take the last 3 bits (0x0007 = 0000 0000 0000 0111)
+	
+	bge s0, s1, rand			; if s0 (random nb) >= 5, then redraw a random number
+
+	stw s0, T_type(zero)		; store type in memory	
+
+	addi s2, zero, START_X		; x = 6
+	stw s2, T_X(zero)			; store in memory anchor position
+
+	addi s2, zero, START_Y		; y = 1
+	stw s2, T_Y(zero)			; store in memory anchor position
+
+	addi s2, zero, N			; set default orientation to North
+	stw s2, T_orientation(zero)	; store orientation in memory
+
+	ldw s0, 0(sp)				; restore saved registers
+	ldw s1, 4(sp)
+	ldw s2, 8(sp)
+	addi sp, sp, 12
+;END:generate_tetromino
+
+;BEGIN:rotate_tetromino
+rotate_tetromino:
+	addi sp, sp, -8
+	stw s0, 0(sp)				; backup saved register
+	stw s1, 4(sp)
+
+	ldw s0, T_orientation(zero)
+	
+	addi s1, zero, rotR
+	beq a0, s1, right
+	addi s1, zero, rotL
+	beq a0, s1, left
+	jmpi next
+
+	right:
+		addi s0, s0, 1
+		andi s0, s0, 0x3		; s0 = s0 mod 4
+		stw s0, T_orientation(zero)
+		jmpi next
+	left:
+		addi s0, s0, -1
+		andi s0, s0, 0x3		; s0 = s0 mod 4
+		stw s0, T_orientation(zero)
+		jmpi next
+	next:
+		ldw s0, 0(sp)
+		ldw s1, 0(sp)
+		addi sp, sp, 8
+		ret
+;END:rotate_tetromino
+
+;BEGIN:act
+act:
+	
+	
+	
+;END:act
+
 C_N_X:
   .word 0x00
   .word 0xFFFFFFFF
