@@ -69,12 +69,13 @@
 ;BEGIN:main
 main:
 	addi sp, zero, LEDS
-	call clear_leds
-	add a0, zero, zero
-	add a1, zero, zero
-	addi a2,zero, FALLING
-	call set_gsa
-	call draw_gsa
+	addi t0, zero, 6
+	addi t1, zero, 1
+	stw t0, T_X(zero)
+	stw t1, T_Y(zero)
+	stw zero, T_type(zero)
+	stw zero, T_orientation(zero)
+	call draw_tetromino
 	ret
 ;END:main
 
@@ -95,16 +96,18 @@ set_pixel:
 	addi t0, zero, 0
 	addi t1, zero, 0
 	addi t2, zero, 0
-	addi t3, zero, 1
+	addi t3, zero, 1 ; Mask value to get the LED to be turned on
 
 	; a0 = x, a1 = y
 	srli t0, a0, 2 		; t0 = x/4 --> LED[0, 1 ou 2]
 	slli t0, t0, 2 		; t0 = LED + t0 * 4
 	slli t1, a0, 3		; t1 = 8 * a0
-	add t1, t1, a1		; t1 = t1 + a1
+	add t1, t1, a1		; t1 = t1 + a1 ;8*x + y 
 	andi t1, t1, 0x1F	; t1 = t1 % 32
 	sll  t3, t3, t1
 	addi t2, t0, LEDS	; t2 = LED + t0
+	ldw t4, 0(t2)
+	or t3, t3, t4
 	stw t3, 0 (t2)
 	ret
 ; END:set_pixel
@@ -235,14 +238,20 @@ draw_tetromino: ; need to take into account a0 now sets activates only tetremino
 	
 	add t4, t4, s0
 	add t0, t0, s1
+	add a0, zero, t4
+	add a1, zero, t0
 	call set_pixel
 	
 	add t5, t5, s0
 	add t1, t1, s1
+	add a0, t5, zero
+	add a1, t1, zero
 	call set_pixel
 	
 	add t6, t6, s0
 	add s2, s2, s1
+	add a0, zero, t6
+	add a1, zero, s2
 	call set_pixel
 
 	ldw s2, 0(sp)
@@ -253,6 +262,7 @@ draw_tetromino: ; need to take into account a0 now sets activates only tetremino
 	
 	ldw s0, 0(sp)
 	addi sp, sp, 4
+	ret
 ;END:draw_tetromino
 
 C_N_X:
