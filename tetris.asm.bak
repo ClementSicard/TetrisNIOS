@@ -321,10 +321,11 @@ rotate_tetromino:
 
 ;BEGIN:act
 act:
-	addi sp, sp, -8
+	addi sp, sp, -12
 	stw s0, 0(sp)
 	stw s1, 4(sp)
-	
+	stw a0, 8(sp)
+
 	addi s0, zero, moveL
 	beq a0, s0, mL
 	addi s0, zero, moveR
@@ -358,8 +359,10 @@ act:
 		jmpi end_act
 	rot:
 		call rotate_tetromino
+		addi a0, zero, OVERLAP
 		check_overlap:
 			; Check for OVERLAP collision
+			call detect_collision
 			
 		jmpi end_act
 
@@ -369,7 +372,8 @@ act:
 	end_act:
 		ldw s0, 0(sp)
 		ldw s1, 4(sp)
-		addi sp, sp, 8
+		ldw a0, 8(sp)
+		addi sp, sp, 12
 ;END:act
 
 
