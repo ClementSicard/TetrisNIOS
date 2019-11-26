@@ -69,18 +69,19 @@
 ;BEGIN:main
 main:
 	addi sp, zero, LEDS
-	addi t0, zero, 6
-	addi t1, zero, 1
-	addi t2, zero, 4
-	addi t3, zero, 1
-	
+	addi t0, zero, 6 ; x= 6
+	addi t1, zero, 1 ; y= 7
+	addi t2, zero, 4 ; type = 2
+	addi t3, zero, 1 ; orien = 1
 	stw t0, T_X(zero)
 	stw t1, T_Y(zero)
 	stw t2, T_type(zero)
 	stw t3, T_orientation(zero)
-	addi a0, zero, 2
-	call draw_tetromino
-	call draw_gsa
+	addi a0, zero, 3
+	call get_tetromino_pair_n
+	;addi a0, zero, 2
+	;call draw_tetromino
+	;call draw_gsa
 	ret
 ;END:main
 
@@ -228,8 +229,8 @@ draw_tetromino: ; need to take into account a0 now sets activates only tetremino
 	ldw t2, T_orientation(zero)
 	ldw t3, T_type(zero)
 	slli t3, t3, 4 ; Type*16
-	slli t2, t2, 2; orientation * 4
-	add t2, t2, t3; Type*16+ orientation * 4
+	slli t2, t2, 2 ; orientation * 4
+	add t2, t2, t3 ; Type*16+ orientation * 4
 	
 	ldw t3, DRAW_Ax(t2) ; gets address of shape from DRAW_Ax/DRAW_Ay
 	ldw t7, DRAW_Ay(t2) ; loads y offsets
@@ -319,6 +320,90 @@ draw_tetromino: ; need to take into account a0 now sets activates only tetremino
 	ret
 ;END:draw_tetromino
 
+;BEGIN:detect_collision
+detect_collision:
+
+
+	
+
+	
+
+
+
+
+;END:detect_collision
+
+;BEGIN:helper
+get_tetromino_pair_n:
+	addi sp, sp, -32
+	stw s0, 28(sp)
+	stw s1, 24(sp)
+	stw s2, 20(sp)
+	stw s3, 16(sp)
+	stw s4, 12(sp)
+	stw s5, 8(sp)
+	stw s6, 4(sp)
+	stw s7, 0(sp)
+	
+	
+	ldw s0, T_X(zero)
+	ldw s1, T_Y(zero)
+	ldw s2, T_orientation(zero)
+	ldw s3, T_type(zero)
+
+	addi s6, zero, 1
+	addi s7, zero, 2
+	addi t0, zero, 3
+
+	slli s3, s3, 4 ; Type*16
+	slli s2, s2, 2; orientation * 4
+	add s2, s2, s3 ; t2 = Type*16+ orientation * 4
+
+	ldw s4, DRAW_Ax(s2) ; gets address of shape from DRAW_Ax/DRAW_Ay
+	ldw s5, DRAW_Ay(s2) ; loads y offsets
+	
+
+	beq a0, zero, pair1 
+	beq a0, s6, pair2
+	beq a0, s7, pair3
+	beq a0, t0, pair4
+	pair1:
+		add v0, zero, s0
+		add v1, zero, s1
+		call end_get_tet_n
+	pair2:
+		ldw s3, 0(s4) ; x offset A1
+		ldw s2, 0(s5) ; y offset B1
+		add v0, s0, s3
+		add v1, s1, s2
+		call end_get_tet_n
+	pair3:
+		ldw s3, 4(s4) ; x offset A2
+		ldw s2, 4(s5) ; y offset B2
+		add v0, s0, s3
+		add v1, s1, s2
+		call end_get_tet_n
+	pair4:
+		ldw s3, 8(s4) ; x offset A3
+		ldw s2, 8(s5) ; y offset B3
+		add v0, s0, s3
+		add v1, s1, s2
+		call end_get_tet_n
+	
+	end_get_tet_n:
+		ldw s0, 28(sp)
+		ldw s1, 24(sp)
+		ldw s2, 20(sp)
+		ldw s3, 16(sp)
+		ldw s4, 12(sp)
+		ldw s5, 8(sp)
+		ldw s6, 4(sp)
+		ldw s7, 0(sp)
+		addi sp, sp, 32
+		ret
+		
+
+;END:helper
 C_N_X:
   .word 0x00
   .word 0xFFFFFFFF
