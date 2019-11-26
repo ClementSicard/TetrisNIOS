@@ -351,6 +351,204 @@ generate_tetromino:
 	addi sp, sp, 12
 ;END:generate_tetromino
 
+
+;BEGIN:detect_collision
+detect_collision:
+	
+	addi s0, zero, W_COL		
+	beq a0, s0, case_W
+	addi s0, zero, E_COL		
+	beq a0, s0, case_E
+	addi s0, zero, So_COL		
+	beq a0, s0, case_So
+	addi s0, zero, OVERLAP
+	beq a0, s0, case_ol
+	call end_det_col
+
+	case_W:
+		addi sp, sp, -4
+		stw a0, 0(sp)
+		addi s0, zero, 4
+		loop_W:
+			beq a0, s0, end_det_col
+			call get_tetromino_pair_n  		;(v0,v1) la paire
+			addi v0, v0, -1
+			addi sp, sp, -8
+			stw a0, 0(sp)
+			stw a1, 4(sp)
+					
+			add a0, v0, zero				; a0 = x
+			add a1, v1, zero				; a1 = y
+			
+			addi sp, sp, -8
+			stw a0, 0(sp)
+			stw a1, 4(sp)
+			call in_gsa
+			
+			ldw a0, 0(sp)
+			ldw a1, 4(sp) 
+			addi sp, sp, 8
+
+			bne v0, zero, col_w
+			
+			call get_gsa
+			addi t0, zero, 1
+			beq v0, t0, col_w
+			addi v0, zero, NONE
+			
+			ldw a0, 0(sp)
+			ldw a1, 4(sp)
+			addi sp, sp, 8
+			call loop_W
+			
+			col_w:
+				addi v0, zero, W_COL
+				ret
+			addi a0, a0, 1
+			call loop_W
+	
+
+	case_E:
+		addi sp, sp, -4
+		stw a0, 0(sp)
+		addi s0, zero, 4
+		loop_E:
+			beq a0, s0, end_det_col
+			call get_tetromino_pair_n  		;(v0,v1) la paire
+			addi v0, v0, 1
+			addi sp, sp, -8
+			stw a0, 0(sp)
+			stw a1, 4(sp)
+					
+			add a0, v0, zero				; a0 = x
+			add a1, v1, zero				; a1 = y
+			
+			addi sp, sp, -8
+			stw a0, 0(sp)
+			stw a1, 4(sp)
+			call in_gsa
+			
+			ldw a0, 0(sp)
+			ldw a1, 4(sp) 
+			addi sp, sp, 8
+
+			bne v0, zero, col_e
+			
+			call get_gsa
+			addi t0, zero, 1
+			beq v0, t0, col_w
+			addi v0, zero, NONE
+			
+			ldw a0, 0(sp)
+			ldw a1, 4(sp)
+			addi sp, sp, 8
+			call loop_E
+			
+			col_e:
+				addi v0, zero, E_COL
+				ret
+			addi a0, a0, 1
+			call loop_E
+	
+
+
+	case_So:
+		addi sp, sp, -4
+		stw a0, 0(sp)
+		addi s0, zero, 4
+		loop_So:
+			beq a0, s0, end_det_col
+			call get_tetromino_pair_n  		;(v0,v1) la paire
+			addi v1, v1, 1
+			addi sp, sp, -8
+			stw a0, 0(sp)
+			stw a1, 4(sp)
+					
+			add a0, v0, zero				; a0 = x
+			add a1, v1, zero				; a1 = y
+			
+			addi sp, sp, -8
+			stw a0, 0(sp)
+			stw a1, 4(sp)
+			call in_gsa
+			
+			ldw a0, 0(sp)
+			ldw a1, 4(sp) 
+			addi sp, sp, 8
+
+			bne v0, zero, col_so
+			
+			call get_gsa
+			addi t0, zero, 1
+			beq v0, t0, col_so
+			addi v0, zero, NONE
+			
+			ldw a0, 0(sp)
+			ldw a1, 4(sp)
+			addi sp, sp, 8
+			call loop_So
+			
+			col_so:
+				addi v0, zero, So_COL
+				ret
+			addi a0, a0, 1
+			call loop_So
+
+
+
+	case_ol:
+		addi sp, sp, -4
+		stw a0, 0(sp)
+		addi s0, zero, 4
+		loop_ol:
+			beq a0, s0, end_det_col
+			call get_tetromino_pair_n  		;(v0,v1) la paire
+			addi sp, sp, -8
+			stw a0, 0(sp)
+			stw a1, 4(sp)
+					
+			add a0, v0, zero				; a0 = x
+			add a1, v1, zero				; a1 = y
+			
+			addi sp, sp, -8
+			stw a0, 0(sp)
+			stw a1, 4(sp)
+			call in_gsa
+			
+			ldw a0, 0(sp)
+			ldw a1, 4(sp) 
+			addi sp, sp, 8
+
+			bne v0, zero, col_ol
+			
+			call get_gsa
+			addi t0, zero, 1
+			beq v0, t0, col_ol
+			addi v0, zero, NONE
+			
+			ldw a0, 0(sp)
+			ldw a1, 4(sp)
+			addi sp, sp, 8
+			call loop_ol
+			
+			col_ol:
+				addi v0, zero, OVERLAP
+				ret
+			addi a0, a0, 1
+			call loop_ol
+	
+	
+
+
+
+
+	end_det_col:
+			ldw a0, 0(sp)
+			addi sp, sp, 4
+			ret
+
+;END:detect_collision
+
 ;BEGIN:rotate_tetromino
 rotate_tetromino:
 	addi sp, sp, -8
@@ -363,18 +561,18 @@ rotate_tetromino:
 	beq a0, s1, right
 	addi s1, zero, rotL
 	beq a0, s1, left
-	jmpi end_rot
+	call end_rot
 
 	right:
 		addi s0, s0, 1
 		andi s0, s0, 0x3		; s0 = s0 mod 4
 		stw s0, T_orientation(zero)
-		jmpi end_rot
+		call end_rot
 	left:
 		addi s0, s0, -1
 		andi s0, s0, 0x3		; s0 = s0 mod 4
 		stw s0, T_orientation(zero)
-		jmpi end_rot
+		call end_rot
 	end_rot:
 		ldw s0, 0(sp)
 		ldw s1, 4(sp)
@@ -384,11 +582,14 @@ rotate_tetromino:
 
 ;BEGIN:act
 act:
-	addi sp, sp, -12
+	addi sp, sp, -20
 	stw s0, 0(sp)
 	stw s1, 4(sp)
-	stw a0, 8(sp)
+	stw s2, 8(sp)
+	stw s3, 12(sp)
+	stw a0, 16(sp)
 
+	add s2, zero, zero				; nb_col register
 	addi s0, zero, moveL
 	beq a0, s0, mL
 	addi s0, zero, moveR
@@ -403,31 +604,52 @@ act:
 	beq a0, s0, res
 
 	mL:
-		; if no collision (TODO)
+		addi a0, zero, W_COL		; check for West collision
+		call detect_collision
+		beq a0, v0, end_act			; if collision goto end_act
 		ldw s0, T_X(zero)
 		addi s0, s0, -1
 		stw s0, T_X(zero)
-		jmpi end_act
+		call end_act
 	mR:
-		; if no collision (TODO)
+		addi a0, zero, E_COL		; check for East collision
+		call detect_collision
+		beq a0, v0, end_act			; if collision goto end_act
 		ldw s0, T_X(zero)
 		addi s0, s0, 1
 		stw s0, T_X(zero)
-		jmpi end_act
+		call end_act
 	mD:
-		; if no collision (TODO)
+		addi a0, zero, So_COL		; check for South collision
+		call detect_collision
+		beq a0, v0, end_act			; if collision goto end_act
 		ldw s0, T_Y(zero)
 		addi s0, s0, 1
 		stw s0, T_Y(zero)
-		jmpi end_act
+		call end_act
 	rot:
 		call rotate_tetromino
 		addi a0, zero, OVERLAP
+		addi s0, zero, 2
 		check_overlap:
-			; Check for OVERLAP collision
-			call detect_collision
-			
-		jmpi end_act
+			call detect_collision	; Check for OVERLAP collision
+			bne a0, v0, end_act
+			addi s2, s2, 1			; nb_col = nb_col + 1
+			beq s2, s0, end_act
+			; check if anchor on left or right
+			ldw s3, T_X(zero)
+			addi s1, zero, START_X
+			bge s3, s1, r_right 	; if x >= 6 goto right
+									
+			addi s3, s3, 1		; center from left if x < 6
+			stw s3, T_X(zero)
+			call loop_rot_overlap
+			r_right:					; center from the right
+				addi s3, s3, -1
+				stw s3, T_X(zero)
+			loop_rot_overlap:
+				call check_overlap
+		call end_act
 
 	res:
 		call reset_game
@@ -435,8 +657,11 @@ act:
 	end_act:
 		ldw s0, 0(sp)
 		ldw s1, 4(sp)
-		ldw a0, 8(sp)
-		addi sp, sp, 12
+		ldw s2, 8(sp)
+		ldw s3, 12(sp)
+		ldw a0, 16(sp)
+		addi sp, sp, 20
+		ret
 ;END:act
 
 
