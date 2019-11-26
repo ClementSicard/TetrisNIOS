@@ -69,14 +69,16 @@
 ;BEGIN:main
 main:
 	addi sp, zero, LEDS
-	addi t0, zero, 6 ; x= 6
-	addi t1, zero, 1 ; y= 7
-	addi t2, zero, 4 ; type = 4
-	addi t3, zero, 1 ; orien = 1
+	addi t0, zero, 10 ; x= 10
+	addi t1, zero, 6 ; y= 6
+	addi t2, zero, L 
+	addi t3, zero, E 
 	stw t0, T_X(zero)
 	stw t1, T_Y(zero)
 	stw t2, T_type(zero)
 	stw t3, T_orientation(zero)
+;	addi a0, zero, So_COL
+;	call detect_collision
 	addi a2, zero, 2
 	call draw_tetromino
 	call draw_gsa
@@ -206,120 +208,7 @@ draw_gsa:
 	ret
 ;END:draw_gsa
 
-
-; BEGIN:draw_tetromino
-draw_tetromino_old: ; need to take into account a0 now sets activates only tetremino
-	addi sp, sp, -4
-	stw ra, 0(sp)
-	
-	addi sp, sp, -4
-	stw s0, 0(sp)
-	
-	addi sp, sp, -4
-	stw s1, 0(sp)
-
-	addi sp, sp, -4
-	stw s2, 0(sp)
-
-	add a2, zero, a0 ; gives a a2 the value passed to draw_tetromino
-	ldw s0, T_X(zero)
-	ldw s1, T_Y(zero)
-	ldw t2, T_orientation(zero)
-	ldw t3, T_type(zero)
-	slli t3, t3, 4 ; Type*16
-	slli t2, t2, 2 ; orientation * 4
-	add t2, t2, t3 ; Type*16+ orientation * 4
-	
-	ldw t3, DRAW_Ax(t2) ; gets address of shape from DRAW_Ax/DRAW_Ay
-	ldw t7, DRAW_Ay(t2) ; loads y offsets
-
-	add a0, zero, s0
-	add a1, zero, s1
-	
-	addi sp, sp, -12
-	stw t2, -8(sp)
-	stw t3, -4(sp)
-	stw t7, 0(sp)	
-
-	call set_gsa
-
-	ldw t7, 0(sp)
-	ldw t3, -4(sp)
-	ldw t2, -8(sp)
-	addi sp, sp, 12
-
-	ldw t4, 0(t3) ; loads x offsets A1
-	ldw t0, 0(t7) ; B1
-	add t4, t4, s0
-	add t0, t0, s1
-	add a0, zero, t4
-	add a1, zero, t0
-
-	addi sp, sp, -12
-	stw t2, -8(sp)
-	stw t3, -4(sp)
-	stw t7, 0(sp)
-	
-	call set_gsa
-
-	ldw t7, 0(sp)
-	ldw t3, -4(sp)
-	ldw t2, -8(sp)
-	addi sp, sp, 12
-
-	ldw t5, 4(t3) ; A2
-	ldw t1, 4(t7) ; B2
-	add t5, t5, s0
-	add t1, t1, s1
-	add a0, t5, zero
-	add a1, t1, zero
-
-	addi sp, sp, -12
-	stw t2, -8(sp)
-	stw t3, -4(sp)
-	stw t7, 0(sp)
-
-	call set_gsa
-	ldw t7, 0(sp)
-	ldw t3, -4(sp)
-	ldw t2, -8(sp)
-	addi sp, sp, 12
-
-	ldw t6, 8(t3) ; A3
-	ldw s2, 8(t7) ; B3
-	
-	add t6, t6, s0
-	add s2, s2, s1
-	add a0, zero, t6
-	add a1, zero, s2
-
-	addi sp, sp, -12
-	stw t2, -8(sp)
-	stw t3, -4(sp)
-	stw t7, 0(sp)
-
-	call set_gsa
-	ldw t7, 0(sp)
-	ldw t3, -4(sp)
-	ldw t2, -8(sp)
-	addi sp, sp, 12
-
-	ldw s2, 0(sp)
-	addi sp, sp, 4
-	
-	ldw s1, 0(sp)
-	addi sp, sp, 4
-	
-	ldw s0, 0(sp)
-	addi sp, sp, 4
-
-	ldw ra, 0(sp)
-	addi sp, sp, 4
-	ret
-;END:draw_tetromino
-
-
-; BEGIN:draw_tetromino
+;BEGIN:draw_tetromino
 draw_tetromino:
 	addi sp, sp, -12
 	stw ra, 8(sp)
@@ -346,16 +235,316 @@ draw_tetromino:
 
 ;BEGIN:detect_collision
 detect_collision:
+	
+	addi s0, zero, W_COL		
+	beq a0, s0, case_W
+	addi s0, zero, E_COL		
+	beq a0, s0, case_E
+	addi s0, zero, So_COL		
+	beq a0, s0, case_So
+	addi s0, zero, OVERLAP
+	beq a0, s0, case_ol
+	call end_det_col
 
+	case_W:
+		addi sp, sp, -4
+		stw a0, 0(sp)
+		addi s0, zero, 4
+		loop_W:
+			beq a0, s0, end_det_col
+			call get_tetromino_pair_n  		;(v0,v1) la paire
+			addi v0, v0, -1
+			addi sp, sp, -8
+			stw a0, 0(sp)
+			stw a1, 4(sp)
+					
+			add a0, v0, zero				; a0 = x
+			add a1, v1, zero				; a1 = y
+			
+			addi sp, sp, -8
+			stw a0, 0(sp)
+			stw a1, 4(sp)
+			call in_gsa
+			
+			ldw a0, 0(sp)
+			ldw a1, 4(sp) 
+			addi sp, sp, 8
 
+			bne v0, zero, col_w
+			
+			call get_gsa
+			addi t0, zero, 1
+			beq v0, t0, col_w
+			addi v0, zero, NONE
+			
+			ldw a0, 0(sp)
+			ldw a1, 4(sp)
+			addi sp, sp, 8
+			call loop_W
+			
+			col_w:
+				addi v0, zero, W_COL
+				ret
+			addi a0, a0, 1
+			call loop_W
 	
 
+	case_E:
+		addi sp, sp, -4
+		stw a0, 0(sp)
+		addi s0, zero, 4
+		loop_E:
+			beq a0, s0, end_det_col
+			call get_tetromino_pair_n  		;(v0,v1) la paire
+			addi v0, v0, 1
+			addi sp, sp, -8
+			stw a0, 0(sp)
+			stw a1, 4(sp)
+					
+			add a0, v0, zero				; a0 = x
+			add a1, v1, zero				; a1 = y
+			
+			addi sp, sp, -8
+			stw a0, 0(sp)
+			stw a1, 4(sp)
+			call in_gsa
+			
+			ldw a0, 0(sp)
+			ldw a1, 4(sp) 
+			addi sp, sp, 8
+
+			bne v0, zero, col_e
+			
+			call get_gsa
+			addi t0, zero, 1
+			beq v0, t0, col_w
+			addi v0, zero, NONE
+			
+			ldw a0, 0(sp)
+			ldw a1, 4(sp)
+			addi sp, sp, 8
+			call loop_E
+			
+			col_e:
+				addi v0, zero, E_COL
+				ret
+			addi a0, a0, 1
+			call loop_E
+	
+
+
+	case_So:
+		addi sp, sp, -4
+		stw a0, 0(sp)
+		addi s0, zero, 4
+		add a0, zero,zero
+		loop_So:
+			beq a0, s0, end_det_col
+			call get_tetromino_pair_n  		;(v0,v1) la paire
+			addi v1, v1, 1
+			addi sp, sp, -8
+			stw a0, 0(sp)
+			stw a1, 4(sp)
+					
+			add a0, v0, zero				; a0 = x
+			add a1, v1, zero				; a1 = y
+			
+			addi sp, sp, -8
+			stw a0, 0(sp)
+			stw a1, 4(sp)
+			call in_gsa
+			
+			ldw a0, 0(sp)
+			ldw a1, 4(sp) 
+			addi sp, sp, 8
+
+			bne v0, zero, col_so
+			
+			call get_gsa
+			addi t0, zero, 1
+			beq v0, t0, col_so
+			addi v0, zero, NONE
+			
+			ldw a0, 0(sp)
+			ldw a1, 4(sp)
+			addi sp, sp, 8
+			addi a0, a0, 1
+			call loop_So
+			
+			col_so:
+				addi v0, zero, So_COL
+				ret
+			addi a0, a0, 1
+			call loop_So
+
+
+
+	case_ol:
+		addi sp, sp, -4
+		stw a0, 0(sp)
+		addi s0, zero, 4
+		loop_ol:
+			beq a0, s0, end_det_col
+			call get_tetromino_pair_n  		;(v0,v1) la paire
+			addi sp, sp, -8
+			stw a0, 0(sp)
+			stw a1, 4(sp)
+					
+			add a0, v0, zero				; a0 = x
+			add a1, v1, zero				; a1 = y
+			
+			addi sp, sp, -8
+			stw a0, 0(sp)
+			stw a1, 4(sp)
+			call in_gsa
+			
+			ldw a0, 0(sp)
+			ldw a1, 4(sp) 
+			addi sp, sp, 8
+
+			bne v0, zero, col_ol
+			
+			call get_gsa
+			addi t0, zero, 1
+			beq v0, t0, col_ol
+			addi v0, zero, NONE
+			
+			ldw a0, 0(sp)
+			ldw a1, 4(sp)
+			addi sp, sp, 8
+			call loop_ol
+			
+			col_ol:
+				addi v0, zero, OVERLAP
+				ret
+			addi a0, a0, 1
+			call loop_ol
+	
 	
 
 
 
+
+	end_det_col:
+			ldw a0, 0(sp)
+			addi sp, sp, 4
+			ret
 
 ;END:detect_collision
+
+;BEGIN:rotate_tetromino
+rotate_tetromino:
+	addi sp, sp, -8
+	stw s0, 0(sp)				; backup saved register
+	stw s1, 4(sp)
+
+	ldw s0, T_orientation(zero)
+	
+	addi s1, zero, rotR
+	beq a0, s1, right
+	addi s1, zero, rotL
+	beq a0, s1, left
+	call end_rot
+
+	right:
+		addi s0, s0, 1
+		andi s0, s0, 0x3		; s0 = s0 mod 4
+		stw s0, T_orientation(zero)
+		call end_rot
+	left:
+		addi s0, s0, -1
+		andi s0, s0, 0x3		; s0 = s0 mod 4
+		stw s0, T_orientation(zero)
+		call end_rot
+	end_rot:
+		ldw s0, 0(sp)
+		ldw s1, 4(sp)
+		addi sp, sp, 8
+		ret
+;END:rotate_tetromino
+
+;BEGIN:act
+act:
+	addi sp, sp, -20
+	stw s0, 0(sp)
+	stw s1, 4(sp)
+	stw s2, 8(sp)
+	stw s3, 12(sp)
+	stw a0, 16(sp)
+
+	add s2, zero, zero				; nb_col register
+	addi s0, zero, moveL
+	beq a0, s0, mL
+	addi s0, zero, moveR
+	beq a0, s0, mR
+	addi s0, zero, moveD
+	beq a0, s0, mD
+	addi s0, zero, rotL
+	beq a0, s0, rot
+	addi s0, zero, rotR
+	beq a0, s0, rot
+	addi s0, zero, reset
+	beq a0, s0, res
+
+	mL:
+		addi a0, zero, W_COL		; check for West collision
+		call detect_collision
+		beq a0, v0, end_act			; if collision goto end_act
+		ldw s0, T_X(zero)
+		addi s0, s0, -1
+		stw s0, T_X(zero)
+		call end_act
+	mR:
+		addi a0, zero, E_COL		; check for East collision
+		call detect_collision
+		beq a0, v0, end_act			; if collision goto end_act
+		ldw s0, T_X(zero)
+		addi s0, s0, 1
+		stw s0, T_X(zero)
+		call end_act
+	mD:
+		addi a0, zero, So_COL		; check for South collision
+		call detect_collision
+		beq a0, v0, end_act			; if collision goto end_act
+		ldw s0, T_Y(zero)
+		addi s0, s0, 1
+		stw s0, T_Y(zero)
+		call end_act
+	rot:
+		call rotate_tetromino
+		addi a0, zero, OVERLAP
+		addi s0, zero, 2
+		check_overlap:
+			call detect_collision	; Check for OVERLAP collision
+			bne a0, v0, end_act
+			addi s2, s2, 1			; nb_col = nb_col + 1
+			beq s2, s0, end_act
+			; check if anchor on left or right
+			ldw s3, T_X(zero)
+			addi s1, zero, START_X
+			bge s3, s1, r_right 	; if x >= 6 goto right
+									
+			addi s3, s3, 1		; center from left if x < 6
+			stw s3, T_X(zero)
+			call loop_rot_overlap
+			r_right:					; center from the right
+				addi s3, s3, -1
+				stw s3, T_X(zero)
+			loop_rot_overlap:
+				call check_overlap
+		call end_act
+	res:
+		;call reset_game
+	
+	end_act:
+		ldw s0, 0(sp)
+		ldw s1, 4(sp)
+		ldw s2, 8(sp)
+		ldw s3, 12(sp)
+		ldw a0, 16(sp)
+		addi sp, sp, 20
+		ret
+;END:act
 
 ;BEGIN:helper
 get_tetromino_pair_n:
