@@ -69,18 +69,17 @@
 ;BEGIN:main
 main:
 	addi sp, zero, LEDS
-	addi t0, zero, 6
-	addi t1, zero, 1
-	addi t2, zero, 4
-	addi t3, zero, 1
+	addi t0, zero, 10
+	addi t1, zero, 6
+	addi t2, zero, L
+	addi t3, zero, E
 	
 	stw t0, T_X(zero)
 	stw t1, T_Y(zero)
 	stw t2, T_type(zero)
 	stw t3, T_orientation(zero)
-	addi a0, zero, 2
-	call draw_tetromino
-	call draw_gsa
+	addi a0, zero, So_COL
+	call detect_collision
 	ret
 ;END:main
 
@@ -351,6 +350,8 @@ generate_tetromino:
 	addi sp, sp, 12
 ;END:generate_tetromino
 
+check_col_helper:
+	
 
 ;BEGIN:detect_collision
 detect_collision:
@@ -363,189 +364,202 @@ detect_collision:
 	beq a0, s0, case_So
 	addi s0, zero, OVERLAP
 	beq a0, s0, case_ol
+	addi v0, zero, NONE
 	call end_det_col
 
 	case_W:
-		addi sp, sp, -4
-		stw a0, 0(sp)
+		addi sp, sp, -8
+		stw a0, 0(sp)						; type de la collision, argument de detect_collision
+		stw ra, 4(sp)
 		addi s0, zero, 4
+		addi a0, zero, 0					; loop index
 		loop_W:
-			beq a0, s0, end_det_col
-			call get_tetromino_pair_n  		;(v0,v1) la paire
+			beq a0, s0, end_det_col			; if loop index = 4 goto end_det_col
+			
+			call get_tetromino_pair_n  		;(v0,v1) la paire  a0 --> index of loop
 			addi v0, v0, -1
+	
 			addi sp, sp, -8
-			stw a0, 0(sp)
-			stw a1, 4(sp)
+			stw a0, 0(sp)					; save loop index to stack
+			stw a1, 4(sp)					; save a1 in case (???)
 					
-			add a0, v0, zero				; a0 = x
+			add a0, v0, zero				; a0 = x - 1
 			add a1, v1, zero				; a1 = y
 			
 			addi sp, sp, -8
-			stw a0, 0(sp)
-			stw a1, 4(sp)
+			stw a0, 0(sp)					; push a0 = x - 1 to the stack
+			stw a1, 4(sp)					; push a1 = y to stack 
+			
 			call in_gsa
 			
-			ldw a0, 0(sp)
+			ldw a0, 0(sp)					; reuse arguments for in_gsa to apply to get_gsa (in case modified)
 			ldw a1, 4(sp) 
 			addi sp, sp, 8
 
-			bne v0, zero, col_w
+			bne v0, zero, col_w				; if not in gsa --> collision
 			
-			call get_gsa
+			call get_gsa					
 			addi t0, zero, 1
-			beq v0, t0, col_w
-			addi v0, zero, NONE
+			beq v0, t0, col_w				; if get_gsa = 1 --> collision
+
+			addi v0, zero, NONE				; default value for v0
 			
-			ldw a0, 0(sp)
-			ldw a1, 4(sp)
+			ldw a0, 0(sp)					; takes back loop index
+			ldw a1, 4(sp)					; takes back a1 initial value (not necessarily known)
 			addi sp, sp, 8
+			addi a0, a0, 1					; increment loop index
 			call loop_W
 			
 			col_w:
 				addi v0, zero, W_COL
-				ret
-			addi a0, a0, 1
-			call loop_W
+				call end_det_col
 	
-
 	case_E:
-		addi sp, sp, -4
-		stw a0, 0(sp)
+		addi sp, sp, -8
+		stw a0, 0(sp)						; type de la collision, argument de detect_collision
+		stw ra, 4(sp)
 		addi s0, zero, 4
+		addi a0, zero, 0					; loop index
 		loop_E:
-			beq a0, s0, end_det_col
-			call get_tetromino_pair_n  		;(v0,v1) la paire
+			beq a0, s0, end_det_col			; if loop index = 4 goto end_det_col
+			
+			call get_tetromino_pair_n  		;(v0,v1) la paire  a0 --> index of loop
 			addi v0, v0, 1
+	
 			addi sp, sp, -8
-			stw a0, 0(sp)
-			stw a1, 4(sp)
+			stw a0, 0(sp)					; save loop index to stack
+			stw a1, 4(sp)					; save a1 in case (???)
 					
-			add a0, v0, zero				; a0 = x
+			add a0, v0, zero				; a0 = x + 1
 			add a1, v1, zero				; a1 = y
 			
 			addi sp, sp, -8
-			stw a0, 0(sp)
-			stw a1, 4(sp)
+			stw a0, 0(sp)					; push a0 = x + 1 to the stack
+			stw a1, 4(sp)					; push a1 = y to stack 
+			
 			call in_gsa
 			
-			ldw a0, 0(sp)
+			ldw a0, 0(sp)					; reuse arguments for in_gsa to apply to get_gsa (in case modified)
 			ldw a1, 4(sp) 
 			addi sp, sp, 8
 
-			bne v0, zero, col_e
+			bne v0, zero, col_e				; if not in gsa --> collision
 			
-			call get_gsa
+			call get_gsa					
 			addi t0, zero, 1
-			beq v0, t0, col_w
-			addi v0, zero, NONE
+			beq v0, t0, col_e				; if get_gsa = 1 --> collision
+
+			addi v0, zero, NONE				; default value for v0
 			
-			ldw a0, 0(sp)
-			ldw a1, 4(sp)
+			ldw a0, 0(sp)					; takes back loop index
+			ldw a1, 4(sp)					; takes back a1 initial value (not necessarily known)
 			addi sp, sp, 8
+			addi a0, a0, 1					; increment loop index
 			call loop_E
 			
 			col_e:
 				addi v0, zero, E_COL
-				ret
-			addi a0, a0, 1
-			call loop_E
-	
-
+				call end_det_col
 
 	case_So:
-		addi sp, sp, -4
-		stw a0, 0(sp)
+		addi sp, sp, -8
+		stw a0, 0(sp)						; type de la collision, argument de detect_collision
+		stw ra, 4(sp)
 		addi s0, zero, 4
+		addi a0, zero, 0					; loop index
 		loop_So:
-			beq a0, s0, end_det_col
-			call get_tetromino_pair_n  		;(v0,v1) la paire
+			beq a0, s0, end_det_col			; if loop index = 4 goto end_det_col
+			
+			call get_tetromino_pair_n  		;(v0,v1) la paire  a0 --> index of loop
 			addi v1, v1, 1
+	
 			addi sp, sp, -8
-			stw a0, 0(sp)
-			stw a1, 4(sp)
+			stw a0, 0(sp)					; save loop index to stack
+			stw a1, 4(sp)					; save a1 in case (???)
 					
 			add a0, v0, zero				; a0 = x
-			add a1, v1, zero				; a1 = y
+			add a1, v1, zero				; a1 = y + 1
 			
 			addi sp, sp, -8
-			stw a0, 0(sp)
-			stw a1, 4(sp)
+			stw a0, 0(sp)					; push a0 = x to the stack
+			stw a1, 4(sp)					; push a1 = y + 1 to stack 
+			
 			call in_gsa
 			
-			ldw a0, 0(sp)
+			ldw a0, 0(sp)					; reuse arguments for in_gsa to apply to get_gsa (in case modified)
 			ldw a1, 4(sp) 
 			addi sp, sp, 8
 
-			bne v0, zero, col_so
+			bne v0, zero, col_So			; if not in gsa --> collision
 			
-			call get_gsa
+			call get_gsa					
 			addi t0, zero, 1
-			beq v0, t0, col_so
-			addi v0, zero, NONE
-			
-			ldw a0, 0(sp)
-			ldw a1, 4(sp)
-			addi sp, sp, 8
-			call loop_So
-			
-			col_so:
-				addi v0, zero, So_COL
-				ret
-			addi a0, a0, 1
-			call loop_So
+			beq v0, t0, col_So				; if get_gsa = 1 --> collision
 
+			addi v0, zero, NONE				; default value for v0
+			
+			ldw a0, 0(sp)					; takes back loop index
+			ldw a1, 4(sp)					; takes back a1 initial value (not necessarily known)
+			addi sp, sp, 8
+			addi a0, a0, 1					; increment loop index
+			call loop_So
+			
+			col_So:
+				addi v0, zero, So_COL
+				call end_det_col
 
 
 	case_ol:
-		addi sp, sp, -4
-		stw a0, 0(sp)
+		addi sp, sp, -8
+		stw a0, 0(sp)						; type de la collision, argument de detect_collision
+		stw ra, 4(sp)
 		addi s0, zero, 4
+		addi a0, zero, 0					; loop index
 		loop_ol:
-			beq a0, s0, end_det_col
-			call get_tetromino_pair_n  		;(v0,v1) la paire
+			beq a0, s0, end_det_col			; if loop index = 4 goto end_det_col
+			
+			call get_tetromino_pair_n  		;(v0,v1) la paire  a0 --> index of loop
+	
 			addi sp, sp, -8
-			stw a0, 0(sp)
-			stw a1, 4(sp)
+			stw a0, 0(sp)					; save loop index to stack
+			stw a1, 4(sp)					; save a1 in case (???)
 					
-			add a0, v0, zero				; a0 = x
+			add a0, v0, zero				; a0 = x - 1
 			add a1, v1, zero				; a1 = y
 			
 			addi sp, sp, -8
-			stw a0, 0(sp)
-			stw a1, 4(sp)
+			stw a0, 0(sp)					; push a0 = x - 1 to the stack
+			stw a1, 4(sp)					; push a1 = y to stack 
+			
 			call in_gsa
 			
-			ldw a0, 0(sp)
+			ldw a0, 0(sp)					; reuse arguments for in_gsa to apply to get_gsa (in case modified)
 			ldw a1, 4(sp) 
 			addi sp, sp, 8
 
-			bne v0, zero, col_ol
+			bne v0, zero, col_ol			; if not in gsa --> collision
 			
-			call get_gsa
+			call get_gsa					
 			addi t0, zero, 1
-			beq v0, t0, col_ol
-			addi v0, zero, NONE
+			beq v0, t0, col_ol				; if get_gsa = 1 --> collision
+
+			addi v0, zero, NONE				; default value for v0
 			
-			ldw a0, 0(sp)
-			ldw a1, 4(sp)
+			ldw a0, 0(sp)					; takes back loop index
+			ldw a1, 4(sp)					; takes back a1 initial value (not necessarily known)
 			addi sp, sp, 8
+			addi a0, a0, 1					; increment loop index
 			call loop_ol
 			
 			col_ol:
 				addi v0, zero, OVERLAP
-				ret
-			addi a0, a0, 1
-			call loop_ol
-	
-	
-
-
-
+				call end_det_col
 
 	end_det_col:
-			ldw a0, 0(sp)
-			addi sp, sp, 4
-			ret
+		ldw a0, 0(sp)
+		ldw ra, 4(sp)
+		addi sp, sp, 8
+		ret
 
 ;END:detect_collision
 
@@ -919,9 +933,76 @@ DRAW_Ay:                        ; address of shape arrays, y_axis
     .word L_W_Y
 
 
+get_tetromino_pair_n:
+	addi sp, sp, -36
+	stw ra , 32(sp)
+	stw s0, 28(sp)
+	stw s1, 24(sp)
+	stw s2, 20(sp)
+	stw s3, 16(sp)
+	stw s4, 12(sp)
+	stw s5, 8(sp)
+	stw s6, 4(sp)
+	stw s7, 0(sp)
+	
+	
+	ldw s0, T_X(zero)
+	ldw s1, T_Y(zero)
+	ldw s2, T_orientation(zero)
+	ldw s3, T_type(zero)
 
+	addi s6, zero, 1
+	addi s7, zero, 2
+	addi t0, zero, 3
 
+	slli s3, s3, 4 ; Type*16
+	slli s2, s2, 2; orientation * 4
+	add s2, s2, s3 ; t2 = Type*16+ orientation * 4
 
+	ldw s4, DRAW_Ax(s2) ; gets address of shape from DRAW_Ax/DRAW_Ay
+	ldw s5, DRAW_Ay(s2) ; loads y offsets
+	
+
+	beq a0, zero, pair1 
+	beq a0, s6, pair2
+	beq a0, s7, pair3
+	beq a0, t0, pair4
+	pair1:
+		add v0, zero, s0
+		add v1, zero, s1
+		call end_get_tet_n
+	pair2:
+		ldw s3, 0(s4) ; x offset A1
+		ldw s2, 0(s5) ; y offset B1
+		add v0, s0, s3
+		add v1, s1, s2
+		call end_get_tet_n
+	pair3:
+		ldw s3, 4(s4) ; x offset A2
+		ldw s2, 4(s5) ; y offset B2
+		add v0, s0, s3
+		add v1, s1, s2
+		call end_get_tet_n
+	pair4:
+		ldw s3, 8(s4) ; x offset A3
+		ldw s2, 8(s5) ; y offset B3
+		add v0, s0, s3
+		add v1, s1, s2
+		call end_get_tet_n
+	
+	end_get_tet_n:
+		ldw ra, 32(sp)
+		ldw s0, 28(sp)
+		ldw s1, 24(sp)
+		ldw s2, 20(sp)
+		ldw s3, 16(sp)
+		ldw s4, 12(sp)
+		ldw s5, 8(sp)
+		ldw s6, 4(sp)
+		ldw s7, 0(sp)
+		addi sp, sp, 36
+		ret
+	
 
 
 
