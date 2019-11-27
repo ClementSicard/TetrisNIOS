@@ -69,19 +69,18 @@
 ;BEGIN:main
 main:
 	addi sp, zero, LEDS
-	addi t0, zero, 10 ; x= 10
-	addi t1, zero, 6 ; y= 6
-	addi t2, zero, L 
-	addi t3, zero, E 
+	addi t0, zero, 6 
+	addi t1, zero, 1
+	addi t2, zero, S 
+	addi t3, zero, So 
 	stw t0, T_X(zero)
 	stw t1, T_Y(zero)
 	stw t2, T_type(zero)
 	stw t3, T_orientation(zero)
-;	addi a0, zero, So_COL
-;	call detect_collision
-	addi a2, zero, 2
+	addi a0, zero, PLACED
 	call draw_tetromino
 	call draw_gsa
+	call wait
 	ret
 ;END:main
 
@@ -216,6 +215,7 @@ draw_tetromino:
 	stw s1, 0(sp)
 	addi s0, zero, 3
 	add s1, zero, a0
+	add a2, zero, a0
 	loop_draw_tetromino:
 		blt s0, zero, end_draw_tetromino
 		add a0, s0, zero
@@ -545,6 +545,18 @@ act:
 		addi sp, sp, 20
 		ret
 ;END:act
+
+;BEGIN:get_input
+get_input:
+	ldw v0, BUTTONS+4(zero)
+	stw zero, BUTTONS+4(zero)
+	ret
+;END:get_input
+
+;BEGIN:
+
+;END:
+
 
 ;BEGIN:helper
 get_tetromino_pair_n:
