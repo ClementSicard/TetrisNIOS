@@ -69,17 +69,25 @@
 ;BEGIN:main
 main:
 	addi sp, zero, LEDS
-	addi t0, zero, 10
-	addi t1, zero, 6
-	addi t2, zero, L
-	addi t3, zero, E
+	addi t0, zero, 2
+	addi t1, zero, 3
+	addi t2, zero, T
+	addi t3, zero, W
 	
 	stw t0, T_X(zero)
 	stw t1, T_Y(zero)
 	stw t2, T_type(zero)
 	stw t3, T_orientation(zero)
-	addi a0, zero, So_COL
-	call detect_collision
+
+	call draw_tetromino
+	call draw_gsa
+	call wait
+	addi a0, zero, rotR
+	call act
+
+	call draw_tetromino
+	call draw_gsa
+	call wait
 	ret
 ;END:main
 
@@ -167,6 +175,7 @@ set_gsa:
 	stw a2, GSA (t0)
 	ret
 ;END:set_gsa
+
 ;BEGIN:draw_gsa
 draw_gsa:
 	addi sp, sp, -12
@@ -462,7 +471,7 @@ detect_collision:
 				call end_det_col
 
 	case_So:
-		addi sp, sp, -4
+		addi sp, sp, -8
 		stw a0, 0(sp)						; type de la collision, argument de detect_collision
 		stw ra, 4(sp)
 		addi s0, zero, 4
@@ -565,43 +574,46 @@ detect_collision:
 
 ;BEGIN:rotate_tetromino
 rotate_tetromino:
-	addi sp, sp, -8
+	addi sp, sp, -12
 	stw s0, 0(sp)				; backup saved register
 	stw s1, 4(sp)
+	stw ra, 8(sp)
 
-	ldw s0, T_orientation(zero)
+	ldw s0, T_orientation(zero)	; s0 = T_orientation
 	
-	addi s1, zero, rotR
-	beq a0, s1, right
+	addi s1, zero, rotR 		
+	beq a0, s1, right 			; if a0 = rotR goto right 
 	addi s1, zero, rotL
-	beq a0, s1, left
+	beq a0, s1, left			; if a0 = rotL goto left
 	call end_rot
 
 	right:
 		addi s0, s0, 1
-		andi s0, s0, 0x3		; s0 = s0 mod 4
+		andi s0, s0, 0x3		; s0 = s0 mod 4 -> new orientation
 		stw s0, T_orientation(zero)
 		call end_rot
 	left:
 		addi s0, s0, -1
-		andi s0, s0, 0x3		; s0 = s0 mod 4
+		andi s0, s0, 0x3		; s0 = s0 mod 4 -> new orientation
 		stw s0, T_orientation(zero)
 		call end_rot
 	end_rot:
 		ldw s0, 0(sp)
 		ldw s1, 4(sp)
-		addi sp, sp, 8
+		ldw ra, 8(sp)
+		addi sp, sp, 12
 		ret
 ;END:rotate_tetromino
 
 ;BEGIN:act
 act:
-	addi sp, sp, -20
+	addi sp, sp, -24
 	stw s0, 0(sp)
 	stw s1, 4(sp)
 	stw s2, 8(sp)
 	stw s3, 12(sp)
 	stw a0, 16(sp)
+	stw ra, 20(sp)
 
 	add s2, zero, zero				; nb_col register
 	addi s0, zero, moveL
@@ -627,7 +639,11 @@ act:
 		call end_act
 	mR:
 		addi a0, zero, E_COL		; check for East collision
-		call detect_collision
+		;call detect_collision
+
+		; FOR TEST ONLY*********
+		addi v0, zero, NONE
+		;***********************
 		beq a0, v0, end_act			; if collision goto end_act
 		ldw s0, T_X(zero)
 		addi s0, s0, 1
@@ -635,7 +651,12 @@ act:
 		call end_act
 	mD:
 		addi a0, zero, So_COL		; check for South collision
-		call detect_collision
+		;call detect_collision
+
+		; FOR TEST ONLY*********
+		addi v0, zero, NONE
+		;***********************
+		
 		beq a0, v0, end_act			; if collision goto end_act
 		ldw s0, T_Y(zero)
 		addi s0, s0, 1
@@ -646,7 +667,12 @@ act:
 		addi a0, zero, OVERLAP
 		addi s0, zero, 2
 		check_overlap:
-			call detect_collision	; Check for OVERLAP collision
+			;call detect_collision	; Check for OVERLAP collision
+			
+			; FOR TESTS ONLY ****************
+			addi v0, zero, NONE
+			;********************************
+
 			bne a0, v0, end_act
 			addi s2, s2, 1			; nb_col = nb_col + 1
 			beq s2, s0, end_act
@@ -674,7 +700,8 @@ act:
 		ldw s2, 8(sp)
 		ldw s3, 12(sp)
 		ldw a0, 16(sp)
-		addi sp, sp, 20
+		ldw ra, 20(sp)
+		addi sp, sp, 24
 		ret
 ;END:act
 
