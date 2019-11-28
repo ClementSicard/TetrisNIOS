@@ -69,18 +69,57 @@
 ;BEGIN:main
 main:
 	addi sp, zero, LEDS
-	addi t0, zero, 6 
-	addi t1, zero, 1
-	addi t2, zero, S 
-	addi t3, zero, So 
-	stw t0, T_X(zero)
-	stw t1, T_Y(zero)
-	stw t2, T_type(zero)
-	stw t3, T_orientation(zero)
-	addi a0, zero, PLACED
-	call draw_tetromino
+
+;	addi t0, zero, 6 
+;	addi t1, zero, 1
+;	addi t2, zero, S 
+;	addi t3, zero, E
+
+;	stw t0, T_X(zero)
+;	stw t1, T_Y(zero)
+;	stw t2, T_type(zero)
+;	stw t3, T_orientation(zero)
+
+;	addi a0, zero, FALLING
+;	call draw_tetromino
+;	call draw_gsa
+	addi a0,zero,3
+	add a1, zero,zero
+	addi a2, zero, 2
+	call set_gsa
+	addi a0,zero,3
+	addi a1, zero,1
+	addi a2, zero, 2
+	call set_gsa
+
+
+	addi s0, zero, 12 ; s0 = 12
+	add s1, zero, zero ; s1 = 0
+	
+	addi s2, zero, 4
+	addi s3, zero, 8
+
+	loop_main_2:
+	beq s2, s3, end_setup
+	add s1, zero, zero 
+	loop_main_1: 
+	beq s0, s1, loop_main_2_inc
+	add a0, s1, zero
+	add a1, zero, s2
+	addi a2, zero, PLACED
+	call set_gsa
+	addi s1, s1, 1
+	call loop_main_1
+	loop_main_2_inc:
+	addi s2, s2, 1
+	call loop_main_2
+	
+	end_setup:
 	call draw_gsa
 	call wait
+	call detect_full_line
+	add a0, v0, zero
+	call remove_full_line
 	ret
 ;END:main
 
@@ -119,13 +158,17 @@ set_pixel:
 
 ; BEGIN:wait
 wait:
+	addi sp, sp, -4
+	stw ra, 0(sp)
 	addi t0, zero, 1
-	slli t0, t0, 20
+	slli t0, t0, 21 ; set to 21 always
 	loop: 
 		beq t0, zero, done
 		addi t0, t0, -1
 		call loop
 	done:
+		ldw ra, 0(sp)
+		addi sp, sp, 4
 		ret
 ; END:wait
 
@@ -553,9 +596,121 @@ get_input:
 	ret
 ;END:get_input
 
-;BEGIN:
+;BEGIN:detect_full_line
+detect_full_line:
+	addi sp, sp, -28
+	stw s0, 0(sp)
+	stw s1, 4(sp)
+	stw s2, 8(sp)
+	stw s3, 12(sp)
+	stw s4, 16(sp)
+	stw s5, 20(sp)
+	stw ra, 24(sp)
+	
+	add s0, zero, zero
+	add s1, zero, zero
+	addi s2, zero, 8
+	addi s3, zero, 12
+	addi s4, zero, 1
+	addi s5, zero, 12
+	loop1_detect_line: 
+	beq s0, s2, end_detect_line ; if s0 = 8 => done and line 8 detected
+		loop2_detect_line: 
+		beq s1, s3, incLoop1 ; if s1 = 12 => go to next line inc y and set x = 0
+		add a0, s1, zero ; a0 = x = s1
+		add a1, s0, zero ; a1 = y = s0
+		call get_gsa     ; get (x,y)
+		bne v0, s4, incLoop1 ; get_gsa(x,y) != 1 => no continous line => check next line inc y and set x = 0
+		addi s1, s1, 1        ; inc x and loop on next x because get_gsa = 1
+		beq s1, s5, line_found ; if x = 12 => placed in each (x,y) in line lineFound
+		call loop2_detect_line 
+	incLoop1:
+		addi s0, s0, 1
+		add  s1, zero, zero
+		call loop1_detect_line
+	end_detect_line:
+		addi v0, zero, 8
+		ldw s0, 0(sp)
+		ldw s1, 4(sp)
+		ldw s2, 8(sp)
+		ldw s3, 12(sp)
+		ldw s4, 16(sp)
+		ldw s5, 20(sp)
+		ldw ra, 24(sp)
+		addi sp, sp, 28
+		ret
+	line_found:
+		add v0, zero, s0 ; y
+		ldw s0, 0(sp)
+		ldw s1, 4(sp)
+		ldw s2, 8(sp)
+		ldw s3, 12(sp)
+		ldw s4, 16(sp)
+		ldw s5, 20(sp)
+		ldw ra, 24(sp)
+		addi sp, sp, 28
+		ret
+;END:detect_full_line
 
-;END:
+;BEGIN:remove_full_line
+remove_full_line:
+	addi sp, sp, -4
+	stw ra, 0(sp)
+
+	
+	addi sp, sp, -4
+	stw a0, 0(sp) ; add a0 in stack => corresponds to line number
+	
+	addi a1, zero, NOTHING
+	call helper_remove_line
+	call clear_leds
+	call draw_gsa
+	call wait
+	
+	ldw a0, 0(sp) ; a0 = line nb
+	
+
+	addi a1, zero, PLACED
+	call helper_remove_line
+	call clear_leds
+	call draw_gsa
+	call wait
+	
+	ldw a0, 0(sp) ; a0 = line nb
+
+	addi a1, zero, NOTHING
+	call helper_remove_line
+	call clear_leds
+	call draw_gsa
+	call wait	
+	
+	ldw a0, 0(sp) ; a0 = line nb
+
+	addi a1, zero, PLACED
+	call helper_remove_line
+	call clear_leds
+	call draw_gsa
+	call wait	
+	
+	ldw a0, 0(sp) ; a0 = line nb
+	
+	addi a1, zero, NOTHING
+	call helper_remove_line
+	call clear_leds
+	call draw_gsa
+	call wait
+
+	ldw a0, 0(sp) ; a0 = line nb
+	addi sp, sp, 4
+
+	call helper_move_all_down
+	call clear_leds
+	call draw_gsa
+		
+	ldw ra, 0(sp)
+	addi sp, sp, 4
+	ret
+;END:remove_full_line
 
 
 ;BEGIN:helper
@@ -628,8 +783,88 @@ get_tetromino_pair_n:
 		ldw s7, 0(sp)
 		addi sp, sp, 36
 		ret
-		
+helper_remove_line:
+	;a0 line number
+	; a1 value to add to line NOTHING/PLACED
+	addi sp, sp, -20
+	stw s0, 0(sp)
+	stw s1, 4(sp)
+	stw s2, 4(sp)
+	stw ra, 8(sp)
+	stw s3, 12(sp)
 
+	addi s0, zero, 12 ; s0 = 12 = xfinal
+	add s1, zero, zero ; s1 = 0 = x
+	
+	add s2, a0, zero ; Line that has been detected
+	add s3, a1, zero ; s3 = NOTHING/PLACED
+
+	loop_detected_1: ; loop to remove full line
+	beq s0, s1, end_loop_detected_1
+	add a0, s1, zero
+	add a1, zero, s2
+	add a2, zero, s3 ; set each elem of line to s3
+	call set_gsa
+	addi s1, s1, 1
+	call loop_detected_1
+	end_loop_detected_1:
+	ldw s0, 0(sp)
+	ldw s1, 4(sp)
+	ldw s2, 4(sp)
+	ldw ra, 8(sp)
+	ldw s3, 12(sp)
+	addi sp, sp, 20
+	ret
+helper_move_all_down:
+	addi sp, sp, -20
+	stw s0, 0(sp)
+	stw s1, 4(sp)
+	stw s2, 4(sp)
+	stw ra, 8(sp)
+	stw s3, 12(sp)
+
+
+	add s0, zero, zero ; s0 = x
+	addi s1, zero, 12  ; s1 = xfinal
+	add s2, zero, a0   ; s2 = y (start from above the line that has been detected)
+	addi s3, zero, 0   ; s3 = yfinal
+
+	loop_move_down_y:
+	beq s2, s3, end_loop_move_down
+	addi s0, zero, 0
+	loop_move_down_x:
+	beq s0, s1, inc_loop_move_down_y
+	add a0, s0, zero
+	add a1, s2, zero
+	addi a1, a1, -1
+	call get_gsa
+	add a0, s0, zero
+	add a1, s2, zero
+	add a2, v0, zero
+	call set_gsa
+	addi s0, s0, 1
+	call loop_move_down_x
+	inc_loop_move_down_y:
+	addi s2, s2, -1
+	call loop_move_down_y
+	end_loop_move_down:
+	addi s0, zero, 0
+	loop_line_zero:
+	beq s0, s1, end_helper_move_down
+	add a0, s0, zero
+	addi a1, zero, 0
+	addi a2, zero, NOTHING
+	call set_gsa 
+	addi s0, s0, 1
+	call loop_line_zero
+	end_helper_move_down:
+	ldw s0, 0(sp)
+	ldw s1, 4(sp)
+	ldw s2, 4(sp)
+	ldw ra, 8(sp)
+	ldw s3, 12(sp)
+	addi sp, sp, 20
+	ret
 ;END:helper
 C_N_X:
   .word 0x00

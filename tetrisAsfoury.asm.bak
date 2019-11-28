@@ -69,20 +69,57 @@
 ;BEGIN:main
 main:
 	addi sp, zero, LEDS
-;	addi t0, zero, 10 ; x= 10
-;	addi t1, zero, 6 ; y= 6
-;	addi t2, zero, L 
-;	addi t3, zero, E 
-;	stw t0, T_X(zero)
-;	stw t1, T_Y(zero)
-;	stw t2, T_type(zero)
-;	stw t3, T_orientation(zero)
-;	addi a0, zero, So_COL
-;	call detect_collision
-;	addi a2, zero, 2
-;	call draw_tetromino
-;	call draw_gsa
-	call get_input
+
+	addi t0, zero, 6 
+	addi t1, zero, 1
+	addi t2, zero, S 
+	addi t3, zero, E
+
+	stw t0, T_X(zero)
+	stw t1, T_Y(zero)
+	stw t2, T_type(zero)
+	stw t3, T_orientation(zero)
+
+	addi a0, zero, FALLING
+	call draw_tetromino
+	call draw_gsa
+	call wait
+
+	addi a0, zero, NOTHING
+	call draw_tetromino
+	call draw_gsa
+	call clear_leds
+	call wait
+
+	addi t2, zero, S 
+	addi t3, zero, N 
+	stw t2, T_type(zero)
+	stw t3, T_orientation(zero)
+
+	addi a0, zero, FALLING
+	call draw_tetromino
+	call draw_gsa
+	
+	
+
+	
+;	call wait
+;	addi s0, zero, 12
+;	add s1, zero, zero
+;	loop_main: 
+;	beq s0, s1, end_setup
+;	add a0, s1, zero
+;	addi a1, zero, 7
+;	addi a2, zero, PLACED
+;	call set_gsa
+;	addi s1, s1, 1
+;	call loop_main
+;end_setup:
+;call detect_full_line
+	
+		
+	
+	
 	ret
 ;END:main
 
@@ -217,6 +254,7 @@ draw_tetromino:
 	stw s1, 0(sp)
 	addi s0, zero, 3
 	add s1, zero, a0
+	add a2, zero, a0
 	loop_draw_tetromino:
 		blt s0, zero, end_draw_tetromino
 		add a0, s0, zero
@@ -554,8 +592,35 @@ get_input:
 	ret
 ;END:get_input
 
-;BEGIN:
-
+;BEGIN:detect_full_line
+detect_full_line:
+	add s0, zero, zero
+	add s1, zero, zero
+	addi s2, zero, 8
+	addi s3, zero, 12
+	addi s4, zero, 1
+	addi s5, zero, 12
+	loop1_detect_line: 
+	beq s0, s2, end_detect_line ; if s0 = 8 => done and line 8 detected
+		loop2_detect_line: 
+		beq s1, s3, incLoop1 ; if s1 = 12 => go to next line inc y and set x = 0
+		add a0, s0, zero ; a0 = x
+		add a1, s1, zero ; a1 = y
+		call get_gsa     ; get (x,y)
+		bne v0, s4, incLoop1 ; get_gsa(x,y) != 1 => no continous line => check next line inc y and set x = 0
+		addi s1, s1, 1        ; inc x and loop on next x because get_gsa = 1
+		beq s1, s5, line_found ; if x = 12 => placed in each (x,y) in line lineFound
+		call loop2_detect_line 
+	incLoop1:
+		addi s0, s0, 1
+		add  s1, zero, zero
+		call loop1_detect_line
+	end_detect_line:
+		addi v0, zero, 8
+		ret
+	line_found:
+		add v0, zero, s1
+		ret
 ;END:
 
 
