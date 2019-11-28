@@ -63,31 +63,14 @@
   .equ X_LIMIT, 12
   .equ Y_LIMIT, 8
 
-
   ;; TODO Insert your code here
 
 ;BEGIN:main
 main:
 	addi sp, zero, LEDS
-	addi t0, zero, 2
-	addi t1, zero, 3
-	addi t2, zero, T
-	addi t3, zero, W
-	
-	stw t0, T_X(zero)
-	stw t1, T_Y(zero)
-	stw t2, T_type(zero)
-	stw t3, T_orientation(zero)
-
-	call draw_tetromino
-	call draw_gsa
-	call wait
-	addi a0, zero, rotR
-	call act
-
-	call draw_tetromino
-	call draw_gsa
-	call wait
+	addi t0, zero, 3
+	stw t0, SCORE(zero)
+	call display_score
 	ret
 ;END:main
 
@@ -215,7 +198,7 @@ draw_gsa:
 ;END:draw_gsa
 
 
-; BEGIN:draw_tetromino
+;BEGIN:draw_tetromino
 draw_tetromino:
 	addi sp, sp, -12
 	stw ra, 8(sp)
@@ -223,6 +206,7 @@ draw_tetromino:
 	stw s1, 0(sp)
 	addi s0, zero, 3
 	add s1, zero, a0
+	add a2, zero, a0
 	loop_draw_tetromino:
 		blt s0, zero, end_draw_tetromino
 		add a0, s0, zero
@@ -488,10 +472,11 @@ detect_collision:
 
 ;BEGIN:rotate_tetromino
 rotate_tetromino:
-	addi sp, sp, -12
+	addi sp, sp, -16
 	stw s0, 0(sp)				; backup saved register
 	stw s1, 4(sp)
 	stw ra, 8(sp)
+	stw a0, 12(sp)
 
 	ldw s0, T_orientation(zero)	; s0 = T_orientation
 	
@@ -515,19 +500,22 @@ rotate_tetromino:
 		ldw s0, 0(sp)
 		ldw s1, 4(sp)
 		ldw ra, 8(sp)
-		addi sp, sp, 12
+		ldw a0, 12(sp)
+		addi sp, sp, 16
 		ret
 ;END:rotate_tetromino
 
 ;BEGIN:act
 act:
-	addi sp, sp, -24
+	addi sp, sp, -32
 	stw s0, 0(sp)
 	stw s1, 4(sp)
 	stw s2, 8(sp)
 	stw s3, 12(sp)
-	stw a0, 16(sp)
-	stw ra, 20(sp)
+	stw s4, 16(sp)
+	stw s5, 20(sp)
+	stw a0, 24(sp)
+	stw ra, 28(sp)
 
 	add s2, zero, zero				; nb_col register
 	addi s0, zero, moveL
@@ -553,11 +541,7 @@ act:
 		call end_act
 	mR:
 		addi a0, zero, E_COL		; check for East collision
-		;call detect_collision
-
-		; FOR TEST ONLY*********
-		addi v0, zero, NONE
-		;***********************
+		call detect_collision
 		beq a0, v0, end_act			; if collision goto end_act
 		ldw s0, T_X(zero)
 		addi s0, s0, 1
@@ -565,43 +549,47 @@ act:
 		call end_act
 	mD:
 		addi a0, zero, So_COL		; check for South collision
-		;call detect_collision
-
-		; FOR TEST ONLY*********
-		addi v0, zero, NONE
-		;***********************
-		
+		call detect_collision		
 		beq a0, v0, end_act			; if collision goto end_act
 		ldw s0, T_Y(zero)
 		addi s0, s0, 1
 		stw s0, T_Y(zero)
 		call end_act
 	rot:
+		ldw s5, T_orientation(zero)
 		call rotate_tetromino
 		addi a0, zero, OVERLAP
 		addi s0, zero, 2
+		
+		ldw s4, T_X(zero)					; save s4 = x-position before testing collisions
 		check_overlap:
-			;call detect_collision	; Check for OVERLAP collision
+			call detect_collision			; Check for OVERLAP collision
+			cmpeq t0, s2, s0				; t0 = loop index > 0
+			cmpeqi t1, v0, OVERLAP			; t1 = v0 == OVERLAP
+			and t0, t0, t1
 			
-			; FOR TESTS ONLY ****************
-			addi v0, zero, NONE
-			;********************************
-
-			bne a0, v0, end_act
-			addi s2, s2, 1			; nb_col = nb_col + 1
+			beq t0, zero, cont_co			; if v0 is still OVERLAP after 2 iterations, reset original x position
+			stw s4, T_X(zero)
+			stw s5, T_orientation(zero)
+		cont_co:
+			bne a0, v0, end_act			
 			beq s2, s0, end_act
+
 			; check if anchor on left or right
-			ldw s3, T_X(zero)
+			ldw s3, T_X(zero)				; s3 = x position
+			
 			addi s1, zero, START_X
-			bge s3, s1, r_right 	; if x >= 6 goto right
+			bge s3, s1, r_right 			; if x >= 6 goto right
 									
-			addi s3, s3, 1		; center from left if x < 6
+			addi s3, s3, 1					; center from left if x < 6
 			stw s3, T_X(zero)
-			call loop_rot_overlap
-			r_right:					; center from the right
+			addi s2, s2, 1					; nb_col = nb_col + 1
+			call check_overlap
+			
+			r_right:						; center from the right
 				addi s3, s3, -1
 				stw s3, T_X(zero)
-			loop_rot_overlap:
+				addi s2, s2, 1				; nb_col = nb_col + 1
 				call check_overlap
 		call end_act
 
@@ -613,21 +601,159 @@ act:
 		ldw s1, 4(sp)
 		ldw s2, 8(sp)
 		ldw s3, 12(sp)
-		ldw a0, 16(sp)
-		ldw ra, 20(sp)
-		addi sp, sp, 24
+		ldw s4, 16(sp)
+		ldw s5, 20(sp)
+		ldw a0, 24(sp)
+		ldw ra, 28(sp)
+		addi sp, sp, 32
 		ret
 ;END:act
 
 
-
-
 ;BEGIN:reset_game
 reset_game:
+	addi sp, sp, -8
+	stw s0, 0(sp)
+	stw ra, 4(sp)
 
+	; set score to 0
+	addi s0, zero, 0
+	stw s0, SCORE(zero)		
+	call display_score		; all 7-seg displays show zero ?
 
+	; new tetromino generated at (6, 1)
+	call generate_tetromino
 
+	call draw_gsa
+	
+	stw s0, 0(sp)
+	stw ra, 4(sp)
+	addi sp, sp, 8
+	ret
 ;END:reset_game
+
+
+;BEGIN:increment_score
+increment_score:
+	addi sp, sp, -8
+	stw s0, 0(sp)
+	stw ra, 4(sp)
+
+	ldw s0, SCORE(zero)			; s0 = score
+	addi s0, s0, 1				; score = score + 1
+	stw s0, SCORE(zero)
+;END:increment_score
+
+
+;BEGIN:display_score
+display_score:
+	addi sp, sp, -40
+	stw s0, 0(sp)
+	stw s1, 4(sp)
+	stw s2, 8(sp)
+	stw s3, 12(sp)
+	stw s4, 16(sp)
+	stw s5, 20(sp)
+	stw s6, 24(sp)
+	stw a0, 28(sp)
+	stw a1, 32(sp)
+	stw ra, 36(sp)
+
+	ldw s0, SCORE(zero)		; s0 = score
+	
+	addi s1, zero, 10
+	addi s3, zero, 3
+	
+	ds_loop:
+		cmpgei s4, s0, 10 		; s4 = s0 >= 10
+		cmpgei s6, s3, 1 		; counter > 0
+		or s6, s4, s6			; s6 = or les deux du dessus
+		beq s6, zero, end_disp_score
+		addi a0, s0, 0			; a0 = s0 (set ds_helper argument)
+		addi a1, s3, 0			; a1 = counter (segment index)
+		call ds_helper
+		addi s0, v0, 0			; s0 = mod10(c)
+		addi s3, s3, -1			; decrement counter s3
+		call ds_loop
+
+	end_disp_score:
+		; print(c)
+		slli s0, s0, 2
+		addi s2, s0, font_data
+		ldw s2, 0(s2)				; s2 = value to display in 7seg format
+		stw s2, SEVEN_SEGS(zero)
+
+;		slli a0, a0, 2
+;		slli a1, a1, 2
+;		addi s3, a1, SEVEN_SEGS		; SEVEN_SEGS + index
+;		addi s2, a0, font_data
+		
+		ldw s0, 0(sp)
+		ldw s1, 4(sp)
+		ldw s2, 8(sp)
+		ldw s3, 12(sp)
+		ldw s4, 16(sp)
+		ldw s5, 20(sp)
+		ldw s6, 24(sp)
+		ldw a0, 28(sp)
+		ldw a1, 32(sp)
+		ldw ra, 36(sp)
+		addi sp, sp, 40
+		ret
+;END:display_score
+
+ds_helper:
+	; returns a0 mod a1
+	addi sp, sp, -28
+	stw a0, 0(sp)
+	stw a1, 4(sp)
+	stw s0, 8(sp)
+	stw s1, 12(sp)
+	stw s2, 16(sp)
+	stw s3, 20(sp)
+	stw ra, 24(sp)
+	
+	addi s0, zero, 0
+	addi s1, zero, 10
+	mod_loop:
+		blt a0, s1, end_mod			; if a0 < 10 goto end_mod
+		addi a0, a0, -10			; decrement argument
+		addi s0, s0, 1				; increment counter
+		call mod_loop
+
+	end_mod:
+		addi v0, s0, 0				; return counter
+		
+		; print(a0)
+		slli a0, a0, 2
+		slli a1, a1, 2
+		addi s3, a1, SEVEN_SEGS		; SEVEN_SEGS + index
+		addi s2, a0, font_data
+		ldw s2, 0(s2)				; s2 = value to display in 7seg format
+		stw s2, 0(s3)	
+
+		ldw a0, 0(sp)
+		ldw a1, 4(sp)
+		ldw s0, 8(sp)
+		ldw s1, 12(sp)
+		ldw s2, 16(sp)
+		ldw s3, 20(sp)
+		ldw ra, 24(sp)
+		addi sp, sp, 28
+		ret
+
+font_data:
+	.word 0xFC		; 0
+	.word 0x60		; 1
+	.word 0xDA		; 2
+	.word 0xF2		; 3
+	.word 0x66		; 4
+	.word 0xB6		; 5
+	.word 0xBE		; 6
+	.word 0xE0		; 7
+	.word 0xFE 		; 8
+	.word 0xF6		; 9
+
 
 C_N_X:
   .word 0x00
