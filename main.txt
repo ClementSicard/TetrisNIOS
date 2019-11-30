@@ -1,0 +1,29 @@
+rate = 5
+reset_game()
+do 
+{
+	do 
+    {
+		i = 0
+		while (i < rate) {
+            draw_gsa()
+            display_score()
+            wait()
+            get_input()
+
+            draw_tetromino()
+		}
+    } while (falling tetromino can be drawn when moving down)
+    
+    tetromino.GSA_type = PLACED
+    
+    while (exists a full line) {
+        remove uppoermost full line
+    }
+    generate_tetromino()
+    a0 = OVERLAP
+    detect_collision()
+    if (v0 != a0) {
+        draw_tetromino()
+    }
+} while (detect_collision != OVERLAP)

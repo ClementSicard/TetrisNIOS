@@ -1,0 +1,54 @@
+rot:
+    // Stack operations
+
+    s7 = 1
+
+    rotate_tetromino(rot_dir)
+    detect_collision(OVERLAP)
+
+    if v0 = OVERLAP:
+        count = 0
+        x = T_X        
+        
+        loop :
+            detect_collision(OVERLAP)
+            if T_X > START_X:
+                
+                test:
+                    if v0 = NONE :
+                        s6 = 0
+                        goto quit
+
+                    else if count < 2 && v0 == OVERLAP:
+                        T_X -= 1
+                        count += 1
+                        detect_collision(OVERLAP)
+                        call test
+                    
+                    else if count == 2 && v0 == OVERLAP
+                        s6 = 1
+                        T_x = x   
+                        goto quit
+
+                   
+            if T_X >= START_X:
+                detect_collision(OVERLAP)
+                test:
+                    if v0 = NONE :
+                        s6 = 0
+                        goto quit
+
+                    else if count < 2 && v0 == OVERLAP:
+                        T_X += 1
+                        count += 1
+                        detect_collision(OVERLAP)
+                        call test
+                    
+                    else if count == 2 && v0 == OVERLAP
+                        s6 = 1
+                        T_x = x   
+                        goto quit
+
+    quit:
+        v0 = s6
+        // Stack operations
