@@ -572,17 +572,11 @@ rotate_tetromino:
 
 ;BEGIN:act
 act:
-	addi sp, sp, -32
-	stw s0, 0(sp)
-	stw s1, 4(sp)
-	stw s2, 8(sp)
-	stw s3, 12(sp)
-	stw s4, 16(sp)
-	stw s5, 20(sp)
-	stw a0, 24(sp)
-	stw ra, 28(sp)
-
-	add s2, zero, zero				; nb_col register
+	addi sp, sp, -12
+	stw ra, 0(sp)	
+	stw s0, 4(sp)
+	stw s1, 8(sp)
+	
 	addi s0, zero, moveL
 	beq a0, s0, mL
 	addi s0, zero, moveR
@@ -595,11 +589,13 @@ act:
 	beq a0, s0, rot
 	addi s0, zero, reset
 	beq a0, s0, res
+	
 
 	mL:
 		addi a0, zero, W_COL		; check for West collision
 		call detect_collision
 		beq a0, v0, end_act			; if collision goto end_act
+		addi s6, zero, 0
 		ldw s0, T_X(zero)
 		addi s0, s0, -1
 		stw s0, T_X(zero)
@@ -608,6 +604,7 @@ act:
 		addi a0, zero, E_COL		; check for East collision
 		call detect_collision
 		beq a0, v0, end_act			; if collision goto end_act
+		addi s6, zero, 0
 		ldw s0, T_X(zero)
 		addi s0, s0, 1
 		stw s0, T_X(zero)
@@ -616,61 +613,108 @@ act:
 		addi a0, zero, So_COL		; check for South collision
 		call detect_collision		
 		beq a0, v0, end_act			; if collision goto end_act
+		addi s6, zero, 0
 		ldw s0, T_Y(zero)
 		addi s0, s0, 1
 		stw s0, T_Y(zero)
 		call end_act
 	rot:
-		ldw s5, T_orientation(zero)
+		ldw s0, T_orientation(zero)
+		addi sp, sp, -4			; push x
+		stw s0, 0(sp)
 		call rotate_tetromino
 		addi a0, zero, OVERLAP
-		addi s0, zero, 2
+		call detect_collision
+
+		ldw s0, 0(sp)			; pop x
+		addi sp, sp, 4
 		
-		ldw s4, T_X(zero)					; save s4 = x-position before testing collisions
-		check_overlap:
-			call detect_collision			; Check for OVERLAP collision
-			cmpeq t0, s2, s0				; t0 = loop index > 0
-			cmpeqi t1, v0, OVERLAP			; t1 = v0 == OVERLAP
-			and t0, t0, t1
-			
-			beq t0, zero, cont_co			; if v0 is still OVERLAP after 2 iterations, reset original x position
-			stw s4, T_X(zero)
-			stw s5, T_orientation(zero)
-		cont_co:
-			bne a0, v0, end_act			
-			beq s2, s0, end_act
+		addi a0, zero, NONE
+		beq a0, v0, end_act
 
-			; check if anchor on left or right
-			ldw s3, T_X(zero)				; s3 = x position
-			
-			addi s1, zero, START_X
-			bge s3, s1, r_right 			; if x >= 6 goto right
-									
-			addi s3, s3, 1					; center from left if x < 6
-			stw s3, T_X(zero)
-			addi s2, s2, 1					; nb_col = nb_col + 1
-			call check_overlap
-			
-			r_right:						; center from the right
-				addi s3, s3, -1
-				stw s3, T_X(zero)
-				addi s2, s2, 1				; nb_col = nb_col + 1
-				call check_overlap
-		call end_act
+		h1:
+			ldw s1, T_X(zero)
+			addi sp, sp, -8
+			stw s0, 0(sp)
+			stw s1, 4(sp)
+			addi sp, sp, 8
 
+			ldw s1, T_X(zero)
+			addi s3, zero, 6
+			blt t2, t3, left_x
+
+		right_x:
+			; update x position
+			addi s1, s1, -1
+			stw s1, T_X(zero)
+			addi a0, zero, OVERLAP
+			call detect_collision
+
+			ldw s0, 0(sp)
+			ldw s1, 4(sp)
+			addi sp, sp, 8
+
+			addi a0, zero, NONE
+			beq a0, v0, end_act		; if a0 == v0 --> goto end_act
+
+			addi sp, sp, -8
+			stw s0, 0(sp)
+			stw s1, 4(sp)
+
+			addi s1, s1, -1
+			stw s1, T_X(zero)
+			addi a0, zero, OVERLAP
+			call detect_collision
+
+			ldw s0, 0(sp)
+			ldw s1, 4(sp)
+			addi sp, sp, 8
+
+			addi a0, zero, NONE
+			beq a0, v0, end_act
+			stw s0, T_orientation(zero)
+			stw s1, T_X(zero)
+			call end_act
+
+		left_x:
+			addi s1, s1, 1
+			stw t1, T_X(zero)
+			addi a0, zero, OVERLAP
+			call detect_collision
+
+			ldw s0, 0(sp)
+			ldw s1, 4(sp)
+			addi sp, sp, 8
+
+			addi a0, zero, NONE
+			beq a0, v0, end_act
+
+			addi sp, sp, -8
+			stw s0, 0(sp)
+			stw s1, 4(sp)
+
+			addi s1, s1, 1
+			addi a0, zero, OVERLAP
+			call detect_collision
+
+			ldw s0, 0(sp)
+			ldw s1, 4(sp)
+			addi sp, sp, 8
+
+			addi a0, zero, NONE
+			beq a0, v0, end_act
+			stw s1, T_X(zero)
+			stw s0, T_orientation(zero)
+			call end_act
 	res:
 		call reset_game
+		call end_act
 	
 	end_act:
-		ldw s0, 0(sp)
-		ldw s1, 4(sp)
-		ldw s2, 8(sp)
-		ldw s3, 12(sp)
-		ldw s4, 16(sp)
-		ldw s5, 20(sp)
-		ldw a0, 24(sp)
-		ldw ra, 28(sp)
-		addi sp, sp, 32
+		ldw ra, 0(sp)	
+		ldw s0, 4(sp)
+		ldw s1, 8(sp)
+		addi sp, sp, 12
 		ret
 ;END:act
 
