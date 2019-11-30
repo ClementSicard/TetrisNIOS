@@ -151,7 +151,7 @@ clear_leds:
 	addi sp, sp, 4
 	ret
 ; END:clear_leds
-<
+
 
 ; BEGIN:set_pixel
 set_pixel:
@@ -361,18 +361,15 @@ generate_tetromino:
 
 ;BEGIN:detect_collision
 detect_collision:
-	addi sp, sp, -4
-	stw s0, 0(sp)
-
-
-	addi s0, zero, W_COL		
-	beq a0, s0, case_W
-	addi s0, zero, E_COL		
-	beq a0, s0, case_E
-	addi s0, zero, So_COL		
-	beq a0, s0, case_So
-	addi s0, zero, OVERLAP
-	beq a0, s0, case_ol
+	
+	addi t0, zero, W_COL		
+	beq a0, t0, case_W
+	addi t0, zero, E_COL		
+	beq a0, t0, case_E
+	addi t0, zero, So_COL		
+	beq a0, t0, case_So
+	addi t0, zero, OVERLAP
+	beq a0, t0, case_ol
 	addi v0, zero, NONE
 	call end_det_col
 
@@ -380,10 +377,10 @@ detect_collision:
 		addi sp, sp, -8
 		stw a0, 0(sp)						; type de la collision, argument de detect_collision
 		stw ra, 4(sp)
-		addi s0, zero, 4
+		addi t0, zero, 4
 		addi a0, zero, 0					; loop index
 		loop_W:
-			beq a0, s0, end_det_col			; if loop index = 4 goto end_det_col
+			beq a0, t0, end_det_col			; if loop index = 4 goto end_det_col
 			
 			call get_tetromino_pair_n  		;(v0,v1) la paire  a0 --> index of loop
 			addi v0, v0, -1
@@ -408,8 +405,8 @@ detect_collision:
 			bne v0, zero, col_w				; if not in gsa --> collision
 			
 			call get_gsa					
-			addi t0, zero, 1
-			beq v0, t0, col_w				; if get_gsa = 1 --> collision
+			addi t7, zero, 1
+			beq v0, t7, col_w				; if get_gsa = 1 --> collision
 
 			addi v0, zero, NONE				; default value for v0
 			
@@ -427,10 +424,10 @@ detect_collision:
 		addi sp, sp, -8
 		stw a0, 0(sp)						; type de la collision, argument de detect_collision
 		stw ra, 4(sp)
-		addi s0, zero, 4
+		addi t0, zero, 4
 		addi a0, zero, 0					; loop index
 		loop_E:
-			beq a0, s0, end_det_col			; if loop index = 4 goto end_det_col
+			beq a0, t0, end_det_col			; if loop index = 4 goto end_det_col
 			
 			call get_tetromino_pair_n  		;(v0,v1) la paire  a0 --> index of loop
 			addi v0, v0, 1
@@ -455,8 +452,8 @@ detect_collision:
 			bne v0, zero, col_e				; if not in gsa --> collision
 			
 			call get_gsa					
-			addi t0, zero, 1
-			beq v0, t0, col_e				; if get_gsa = 1 --> collision
+			addi t7, zero, 1
+			beq v0, t7, col_e				; if get_gsa = 1 --> collision
 
 			addi v0, zero, NONE				; default value for v0
 			
@@ -474,10 +471,10 @@ detect_collision:
 		addi sp, sp, -8
 		stw a0, 0(sp)						; type de la collision, argument de detect_collision
 		stw ra, 4(sp)
-		addi s0, zero, 4
+		addi t0, zero, 4
 		addi a0, zero, 0					; loop index
 		loop_So:
-			beq a0, s0, end_det_col			; if loop index = 4 goto end_det_col
+			beq a0, t0, end_det_col			; if loop index = 4 goto end_det_col
 			
 			call get_tetromino_pair_n  		;(v0,v1) la paire  a0 --> index of loop
 			addi v1, v1, 1
@@ -502,8 +499,8 @@ detect_collision:
 			bne v0, zero, col_So			; if not in gsa --> collision
 			
 			call get_gsa					
-			addi t0, zero, 1
-			beq v0, t0, col_So				; if get_gsa = 1 --> collision
+			addi t7, zero, 1
+			beq v0, t7, col_So				; if get_gsa = 1 --> collision
 
 			addi v0, zero, NONE				; default value for v0
 			
@@ -522,10 +519,10 @@ detect_collision:
 		addi sp, sp, -8
 		stw a0, 0(sp)						; type de la collision, argument de detect_collision
 		stw ra, 4(sp)
-		addi s0, zero, 4
+		addi t0, zero, 4
 		addi a0, zero, 0					; loop index
 		loop_ol:
-			beq a0, s0, end_det_col			; if loop index = 4 goto end_det_col
+			beq a0, t0, end_det_col			; if loop index = 4 goto end_det_col
 			
 			call get_tetromino_pair_n  		;(v0,v1) la paire  a0 --> index of loop
 	
@@ -549,8 +546,8 @@ detect_collision:
 			bne v0, zero, col_ol			; if not in gsa --> collision
 			
 			call get_gsa					
-			addi t0, zero, 1
-			beq v0, t0, col_ol				; if get_gsa = 1 --> collision
+			addi t7, zero, 1
+			beq v0, t7, col_ol				; if get_gsa = 1 --> collision
 
 			addi v0, zero, NONE				; default value for v0
 			
@@ -567,7 +564,6 @@ detect_collision:
 	end_det_col:
 		ldw a0, 0(sp)
 		ldw ra, 4(sp)
-		ldw s0, 8(sp)
 		addi sp, sp, 8
 		ret
 ;END:detect_collision
