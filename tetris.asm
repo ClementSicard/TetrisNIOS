@@ -366,13 +366,22 @@ detect_collision:
     stw ra, 4(sp)
 
     addi t0, zero, OVERLAP
-	beq a0, t0, case_OL
+	beq t0, a0, case_OL
 	addi t0, zero, W_COL
-	beq a0, t0, case_W
+	beq t0, a0, case_W
 	addi t0, zero, E_COL
-	beq a0, t0, case_E
+	beq t0, a0, case_E
 	addi t0, zero, So_COL
-	beq a0, t0, case_So
+	beq t0, a0, case_So
+
+	case_OL:
+        ldw t0, T_X(zero)
+        ldw t1, T_Y(zero)
+        
+        addi sp, sp, -8
+        stw t1, 0(sp)
+        stw t0, 4(sp)
+        call det
 
 	case_W:
         ldw t0, T_X(zero)
@@ -408,16 +417,6 @@ detect_collision:
         
         addi t1, t1, 1
         stw t1, T_Y(zero)
-        call det
-        
-    case_OL:
-        ldw t0, T_X(zero)
-        ldw t1, T_Y(zero)
-        
-        addi sp, sp, -8
-        stw t1, 0(sp)
-        stw t0, 4(sp)
-        
         call det
 	
     det:
@@ -536,7 +535,8 @@ detect_collision:
         ldw a0, 0(sp)
         ldw ra, 4(sp)
         addi sp, sp, 8
-        ret;END:detect_collision
+        ret
+;END:detect_collision
 
 ;BEGIN:rotate_tetromino
 rotate_tetromino:
