@@ -3,7 +3,7 @@
   .equ T_Y, 0x1004                  ; falling tetrominoe position on y
   .equ T_type, 0x1008               ; falling tetrominoe type
   .equ T_orientation, 0x100C        ; falling tetrominoe orientation
-  .equ SCORE,  0x1010               ; score
+  .equ SCORE, 0x1010	           	; score
   .equ GSA, 0x1014                  ; Game State Array starting address
   .equ SEVEN_SEGS, 0x1198           ; 7-segment display addresses
   .equ LEDS, 0x2000                 ; LED address
@@ -320,7 +320,7 @@ draw_tetromino:
 		ldw ra, 8(sp)
 		ldw s0, 4(sp)
 		ldw s1, 0(sp)
-		addi sp, sp, 8
+		addi sp, sp, 12
 		ret
 ;END:draw_tetromino
 
