@@ -174,7 +174,7 @@ wait:
 	addi sp, sp, -4
 	stw ra, 0(sp)
 	addi t0, zero, 1
-	slli t0, t0, 4 ; set to 21 always <----------------- SET IT TO 21
+	slli t0, t0, 21 ; set to 21 always <----------------- SET IT TO 21
 	loop: 
 		beq t0, zero, done
 		addi t0, t0, -1
@@ -325,215 +325,199 @@ generate_tetromino:
 	ret
 ;END:generate_tetromino
 
-;BEGIN:detect_collision
+; BEGIN:detect_collision
 detect_collision:
-	
-	addi s0, zero, W_COL		
-	beq a0, s0, case_W
-	addi s0, zero, E_COL		
-	beq a0, s0, case_E
-	addi s0, zero, So_COL		
-	beq a0, s0, case_So
-	addi s0, zero, OVERLAP
-	beq a0, s0, case_ol
+	; Push ra
+	addi sp, sp, -4
+	stw ra, 0 (sp)
+	; -----------
+	; Push a0
+	addi sp, sp, -4
+	stw a0, 0 (sp)
+	; -----------
+	addi t0, zero, W_COL
+	beq a0, t0, W_COL_detect
+	addi t0, zero, E_COL
+	beq a0, t0, E_COL_detect
+	addi t0, zero, So_COL
+	beq a0, t0, So_COL_detect
+	addi t0, zero, OVERLAP
+	beq a0, t0, overlap_detect
+	W_COL_detect:
+	ldw t0, T_X (zero)
+	ldw t1, T_Y (zero)
+	; Push t0, t1
+	addi sp, sp, -4
+	stw t0, 0 (sp)
+	addi sp, sp, -4
+	stw t1, 0 (sp)
+	; -----------
+	addi t0, t0, -1
+	stw t0, T_X (zero)
+	jmpi detection
+	E_COL_detect:
+	ldw t0, T_X (zero)
+	ldw t1, T_Y (zero)
+	; Push t0, t1
+	addi sp, sp, -4
+	stw t0, 0 (sp)
+	addi sp, sp, -4
+	stw t1, 0 (sp)
+	; -----------
+	addi t0, t0, 1
+	stw t0, T_X (zero)
+	jmpi detection
+	So_COL_detect:
+	ldw t0, T_X (zero)
+	ldw t1, T_Y (zero)
+	; Push t0, t1
+	addi sp, sp, -4
+	stw t0, 0 (sp)
+	addi sp, sp, -4
+	stw t1, 0 (sp)
+	; -----------
+	addi t1, t1, 1
+	stw t1, T_Y (zero)
+	jmpi detection
+	overlap_detect:
+	ldw t0, T_X (zero)
+	ldw t1, T_Y (zero)
+	; Push t0, t1
+	addi sp, sp, -4
+	stw t0, 0 (sp)
+	addi sp, sp, -4
+	stw t1, 0 (sp)
+	; -----------
+	jmpi detection
+	detection:
+	; -------- draw_tetromino with check bound + call to get_gsa and check if PLACED ----------
+	ldw t0, T_orientation (zero) ; t0 = MEM[T_orientation]
+	slli t0, t0, 2 ; t1 = t1*4
+	ldw t1, T_type (zero) ; t1 = T_type
+	slli t1, t1, 4 ; t1 = t1*16
+	add t0, t0, t1 ; t0 = t0 + t1
+	ldw a0, T_X (zero) ; a0 = MEM[T_X]
+	ldw a1, T_Y (zero)	; a1 = MEM[T_Y]
+	; Push t0
+	addi sp, sp, -4
+	stw t0, 0 (sp)
+	; -----------
+	call in_gsa ; check bound
+	bne v0, zero, collision
+	call get_gsa ; get GSA for anchor point
+	addi t7, zero, PLACED
+	beq v0, t7, collision
+	; Pop t0
+	ldw t0, 0 (sp)
+	addi sp, sp, 4
+	; -----------
+	ldw a0, DRAW_Ax (t0) ; a0 = MEM[DRAW_Ax + t0]
+	ldw a1, DRAW_Ay (t0) ; a1 = MEM[DRAW_Ay + t0]
+	ldw a0, 0 (a0) ; a0 = MEM[a0]
+	ldw a1, 0 (a1) ; a1 = MEM[a1]
+	ldw t1, T_X (zero) ; t1 = MEM[T_X]
+	ldw t2, T_Y (zero)	; t2 = MEM[T_Y]
+	add a0, a0, t1 ; a0 = a0 + t1
+	add a1, a1, t2 ; a1 = a1 + t2
+	; Push t0
+	addi sp, sp, -4
+	stw t0, 0 (sp)
+	; -----------
+	call in_gsa ; check bound
+	bne v0, zero, collision
+	call get_gsa ; get GSA for point after
+	addi t7, zero, PLACED
+	beq v0, t7, collision
+	; Pop t0	
+	ldw t0, 0 (sp)
+	addi sp, sp, 4
+	; -----------
+	ldw a0, DRAW_Ax (t0) ; a0 = MEM[DRAW_Ax + t0]
+	ldw a1, DRAW_Ay (t0) ; a1 = MEM[DRAW_Ay + t0]
+	ldw a0, 4 (a0) ; a0 = MEM[a0 + 4]
+	ldw a1, 4 (a1) ; a1 = MEM[a1 + 4]
+	ldw t1, T_X (zero) ; t1 = MEM[T_X]
+	ldw t2, T_Y (zero)	; t2 = MEM[T_Y]
+	add a0, a0, t1 ; a0 = a0 + t1
+	add a1, a1, t2 ; a1 = a1 + t2
+	; Push t0
+	addi sp, sp, -4
+	stw t0, 0 (sp)
+	; -----------
+	call in_gsa ; check bound
+	bne v0, zero, collision
+	call get_gsa ; get GSA for point after
+	addi t7, zero, PLACED
+	beq v0, t7, collision
+	; Pop t0
+	ldw t0, 0 (sp)
+	addi sp, sp, 4
+	; -----------
+	ldw a0, DRAW_Ax (t0) ; a0 = MEM[DRAW_Ax + t0]
+	ldw a1, DRAW_Ay (t0) ; a1 = MEM[DRAW_Ay + t0]
+	ldw a0, 8 (a0) ; a0 = MEM[a0 + 8]
+	ldw a1, 8 (a1) ; a1 = MEM[a1 + 8]
+	ldw t1, T_X (zero) ; t1 = MEM[T_X]
+	ldw t2, T_Y (zero)	; t2 = MEM[T_Y]
+	add a0, a0, t1 ; a0 = a0 + t1
+	add a1, a1, t2 ; a1 = a1 + t2
+	; Push t0
+	addi sp, sp, -4
+	stw t0, 0 (sp)
+	; -----------
+	call in_gsa ; check bound
+	bne v0, zero, collision
+	call get_gsa ; get GSA for point after
+	addi t7, zero, PLACED
+	beq v0, t7, collision
+	; Pop t0
+	ldw t0, 0 (sp)
+	addi sp, sp, 4
+	; -----------
+	jmpi detect_collision_end
+	collision:
+	; Pop t0
+	ldw t0, 0 (sp)
+	addi sp, sp, 4
+	; -----------
+	; Pop t1, t0
+	ldw t1, 0 (sp)
+	addi sp, sp, 4
+	ldw t0, 0 (sp)
+	addi sp, sp, 4
+	; -----------
+	stw t0, T_X (zero) ; MEM[T_X] = t0
+	stw t1, T_Y (zero) ; MEM[T_Y] = t1
+	; Pop v0
+	ldw v0, 0 (sp)
+	addi sp, sp, 4
+	; -----------
+	; Pop ra
+	ldw ra, 0 (sp)
+	addi sp, sp, 4
+	; -----------
+	ret
+	detect_collision_end:
+	; Pop t1, t0
+	ldw t1, 0 (sp)
+	addi sp, sp, 4
+	ldw t0, 0 (sp)
+	addi sp, sp, 4
+	; -----------
+	stw t0, T_X (zero) ; MEM[T_X] = t0
+	stw t1, T_Y (zero) ; MEM[T_Y] = t1
 	addi v0, zero, NONE
-	call end_det_col
-
-	case_W:
-		addi sp, sp, -8
-		stw a0, 0(sp)						; type de la collision, argument de detect_collision
-		stw ra, 4(sp)
-		addi s0, zero, 4
-		addi a0, zero, 0					; loop index
-		loop_W:
-			beq a0, s0, end_det_col			; if loop index = 4 goto end_det_col
-			
-			call get_tetromino_pair_n  		;(v0,v1) la paire  a0 --> index of loop
-			addi v0, v0, -1
-	
-			addi sp, sp, -8
-			stw a0, 0(sp)					; save loop index to stack
-			stw a1, 4(sp)					; save a1 in case (???)
-					
-			add a0, v0, zero				; a0 = x - 1
-			add a1, v1, zero				; a1 = y
-			
-			addi sp, sp, -8
-			stw a0, 0(sp)					; push a0 = x - 1 to the stack
-			stw a1, 4(sp)					; push a1 = y to stack 
-			
-			call in_gsa
-			
-			ldw a0, 0(sp)					; reuse arguments for in_gsa to apply to get_gsa (in case modified)
-			ldw a1, 4(sp) 
-			addi sp, sp, 8
-
-			bne v0, zero, col_w				; if not in gsa --> collision
-			
-			call get_gsa					
-			addi t0, zero, 1
-			beq v0, t0, col_w				; if get_gsa = 1 --> collision
-
-			addi v0, zero, NONE				; default value for v0
-			
-			ldw a0, 0(sp)					; takes back loop index
-			ldw a1, 4(sp)					; takes back a1 initial value (not necessarily known)
-			addi sp, sp, 8
-			addi a0, a0, 1					; increment loop index
-			call loop_W
-			
-			col_w:
-				addi v0, zero, W_COL
-				call end_det_col
-	
-	case_E:
-		addi sp, sp, -8
-		stw a0, 0(sp)						; type de la collision, argument de detect_collision
-		stw ra, 4(sp)
-		addi s0, zero, 4
-		addi a0, zero, 0					; loop index
-		loop_E:
-			beq a0, s0, end_det_col			; if loop index = 4 goto end_det_col
-			
-			call get_tetromino_pair_n  		;(v0,v1) la paire  a0 --> index of loop
-			addi v0, v0, 1
-	
-			addi sp, sp, -8
-			stw a0, 0(sp)					; save loop index to stack
-			stw a1, 4(sp)					; save a1 in case (???)
-					
-			add a0, v0, zero				; a0 = x + 1
-			add a1, v1, zero				; a1 = y
-			
-			addi sp, sp, -8
-			stw a0, 0(sp)					; push a0 = x + 1 to the stack
-			stw a1, 4(sp)					; push a1 = y to stack 
-			
-			call in_gsa
-			
-			ldw a0, 0(sp)					; reuse arguments for in_gsa to apply to get_gsa (in case modified)
-			ldw a1, 4(sp) 
-			addi sp, sp, 8
-
-			bne v0, zero, col_e				; if not in gsa --> collision
-			
-			call get_gsa					
-			addi t0, zero, 1
-			beq v0, t0, col_e				; if get_gsa = 1 --> collision
-
-			addi v0, zero, NONE				; default value for v0
-			
-			ldw a0, 0(sp)					; takes back loop index
-			ldw a1, 4(sp)					; takes back a1 initial value (not necessarily known)
-			addi sp, sp, 8
-			addi a0, a0, 1					; increment loop index
-			call loop_E
-			
-			col_e:
-				addi v0, zero, E_COL
-				call end_det_col
-
-	case_So:
-		addi sp, sp, -8
-		stw a0, 0(sp)						; type de la collision, argument de detect_collision
-		stw ra, 4(sp)
-		addi s0, zero, 4
-		addi a0, zero, 0					; loop index
-		loop_So:
-			beq a0, s0, end_det_col			; if loop index = 4 goto end_det_col
-			
-			call get_tetromino_pair_n  		;(v0,v1) la paire  a0 --> index of loop
-			addi v1, v1, 1
-	
-			addi sp, sp, -8
-			stw a0, 0(sp)					; save loop index to stack
-			stw a1, 4(sp)					; save a1 in case (???)
-					
-			add a0, v0, zero				; a0 = x
-			add a1, v1, zero				; a1 = y + 1
-			
-			addi sp, sp, -8
-			stw a0, 0(sp)					; push a0 = x to the stack
-			stw a1, 4(sp)					; push a1 = y + 1 to stack 
-			
-			call in_gsa
-			
-			ldw a0, 0(sp)					; reuse arguments for in_gsa to apply to get_gsa (in case modified)
-			ldw a1, 4(sp) 
-			addi sp, sp, 8
-
-			bne v0, zero, col_So			; if not in gsa --> collision
-			
-			call get_gsa					
-			addi t0, zero, 1
-			beq v0, t0, col_So				; if get_gsa = 1 --> collision
-
-			addi v0, zero, NONE				; default value for v0
-			
-			ldw a0, 0(sp)					; takes back loop index
-			ldw a1, 4(sp)					; takes back a1 initial value (not necessarily known)
-			addi sp, sp, 8
-			addi a0, a0, 1					; increment loop index
-			call loop_So
-			
-			col_So:
-				addi v0, zero, So_COL
-				call end_det_col
-
-
-	case_ol:
-		addi sp, sp, -8
-		stw a0, 0(sp)						; type de la collision, argument de detect_collision
-		stw ra, 4(sp)
-		addi s0, zero, 4
-		addi a0, zero, 0					; loop index
-		loop_ol:
-			beq a0, s0, end_det_col			; if loop index = 4 goto end_det_col
-			
-			call get_tetromino_pair_n  		;(v0,v1) la paire  a0 --> index of loop
-	
-			addi sp, sp, -8
-			stw a0, 0(sp)					; save loop index to stack
-			stw a1, 4(sp)					; save a1 in case (???)
-					
-			add a0, v0, zero				; a0 = x - 1
-			add a1, v1, zero				; a1 = y
-			
-			addi sp, sp, -8
-			stw a0, 0(sp)					; push a0 = x - 1 to the stack
-			stw a1, 4(sp)					; push a1 = y to stack 
-			
-			call in_gsa
-			
-			ldw a0, 0(sp)					; reuse arguments for in_gsa to apply to get_gsa (in case modified)
-			ldw a1, 4(sp) 
-			addi sp, sp, 8
-
-			bne v0, zero, col_ol			; if not in gsa --> collision
-			
-			call get_gsa					
-			addi t0, zero, 1
-			beq v0, t0, col_ol				; if get_gsa = 1 --> collision
-
-			addi v0, zero, NONE				; default value for v0
-			
-			ldw a0, 0(sp)					; takes back loop index
-			ldw a1, 4(sp)					; takes back a1 initial value (not necessarily known)
-			addi sp, sp, 8
-			addi a0, a0, 1					; increment loop index
-			call loop_ol
-			
-			col_ol:
-				addi v0, zero, OVERLAP
-				call end_det_col
-
-	end_det_col:
-		ldw a0, 0(sp)
-		ldw ra, 4(sp)
-		addi sp, sp, 8
-		ret
-
+	; Pop a0
+	ldw a0, 0 (sp)
+	addi sp, sp, 4
+	; -----------
+	; Pop ra
+	ldw ra, 0 (sp)
+	addi sp, sp, 4
+	; -----------
+	ret
 ;END:detect_collision
+
 
 ;BEGIN:rotate_tetromino
 rotate_tetromino:
@@ -572,17 +556,11 @@ rotate_tetromino:
 
 ;BEGIN:act
 act:
-	addi sp, sp, -32
-	stw s0, 0(sp)
-	stw s1, 4(sp)
-	stw s2, 8(sp)
-	stw s3, 12(sp)
-	stw s4, 16(sp)
-	stw s5, 20(sp)
-	stw a0, 24(sp)
-	stw ra, 28(sp)
-
-	add s2, zero, zero				; nb_col register
+	addi sp, sp, -12
+	stw ra, 0(sp)	
+	stw s0, 4(sp)
+	stw s1, 8(sp)
+	
 	addi s0, zero, moveL
 	beq a0, s0, mL
 	addi s0, zero, moveR
@@ -595,11 +573,13 @@ act:
 	beq a0, s0, rot
 	addi s0, zero, reset
 	beq a0, s0, res
+	
 
 	mL:
 		addi a0, zero, W_COL		; check for West collision
 		call detect_collision
 		beq a0, v0, end_act			; if collision goto end_act
+		addi s6, zero, 0
 		ldw s0, T_X(zero)
 		addi s0, s0, -1
 		stw s0, T_X(zero)
@@ -608,6 +588,7 @@ act:
 		addi a0, zero, E_COL		; check for East collision
 		call detect_collision
 		beq a0, v0, end_act			; if collision goto end_act
+		addi s6, zero, 0
 		ldw s0, T_X(zero)
 		addi s0, s0, 1
 		stw s0, T_X(zero)
@@ -616,61 +597,108 @@ act:
 		addi a0, zero, So_COL		; check for South collision
 		call detect_collision		
 		beq a0, v0, end_act			; if collision goto end_act
+		addi s6, zero, 0
 		ldw s0, T_Y(zero)
 		addi s0, s0, 1
 		stw s0, T_Y(zero)
 		call end_act
 	rot:
-		ldw s5, T_orientation(zero)
+		ldw s0, T_orientation(zero)
+		addi sp, sp, -4			; push x
+		stw s0, 0(sp)
 		call rotate_tetromino
 		addi a0, zero, OVERLAP
-		addi s0, zero, 2
+		call detect_collision
+
+		ldw s0, 0(sp)			; pop x
+		addi sp, sp, 4
 		
-		ldw s4, T_X(zero)					; save s4 = x-position before testing collisions
-		check_overlap:
-			call detect_collision			; Check for OVERLAP collision
-			cmpeq t0, s2, s0				; t0 = loop index > 0
-			cmpeqi t1, v0, OVERLAP			; t1 = v0 == OVERLAP
-			and t0, t0, t1
-			
-			beq t0, zero, cont_co			; if v0 is still OVERLAP after 2 iterations, reset original x position
-			stw s4, T_X(zero)
-			stw s5, T_orientation(zero)
-		cont_co:
-			bne a0, v0, end_act			
-			beq s2, s0, end_act
+		addi a0, zero, NONE
+		beq a0, v0, end_act
 
-			; check if anchor on left or right
-			ldw s3, T_X(zero)				; s3 = x position
-			
-			addi s1, zero, START_X
-			bge s3, s1, r_right 			; if x >= 6 goto right
-									
-			addi s3, s3, 1					; center from left if x < 6
-			stw s3, T_X(zero)
-			addi s2, s2, 1					; nb_col = nb_col + 1
-			call check_overlap
-			
-			r_right:						; center from the right
-				addi s3, s3, -1
-				stw s3, T_X(zero)
-				addi s2, s2, 1				; nb_col = nb_col + 1
-				call check_overlap
-		call end_act
+		h1:
+			ldw s1, T_X(zero)
+			addi sp, sp, -8
+			stw s0, 0(sp)
+			stw s1, 4(sp)
+			addi sp, sp, 8
 
+			ldw s1, T_X(zero)
+			addi s3, zero, 6
+			blt t2, t3, left_x
+
+		right_x:
+			; update x position
+			addi s1, s1, -1
+			stw s1, T_X(zero)
+			addi a0, zero, OVERLAP
+			call detect_collision
+
+			ldw s0, 0(sp)
+			ldw s1, 4(sp)
+			addi sp, sp, 8
+
+			addi a0, zero, NONE
+			beq a0, v0, end_act		; if a0 == v0 --> goto end_act
+
+			addi sp, sp, -8
+			stw s0, 0(sp)
+			stw s1, 4(sp)
+
+			addi s1, s1, -1
+			stw s1, T_X(zero)
+			addi a0, zero, OVERLAP
+			call detect_collision
+
+			ldw s0, 0(sp)
+			ldw s1, 4(sp)
+			addi sp, sp, 8
+
+			addi a0, zero, NONE
+			beq a0, v0, end_act
+			stw s0, T_orientation(zero)
+			stw s1, T_X(zero)
+			call end_act
+
+		left_x:
+			addi s1, s1, 1
+			stw t1, T_X(zero)
+			addi a0, zero, OVERLAP
+			call detect_collision
+
+			ldw s0, 0(sp)
+			ldw s1, 4(sp)
+			addi sp, sp, 8
+
+			addi a0, zero, NONE
+			beq a0, v0, end_act
+
+			addi sp, sp, -8
+			stw s0, 0(sp)
+			stw s1, 4(sp)
+
+			addi s1, s1, 1
+			addi a0, zero, OVERLAP
+			call detect_collision
+
+			ldw s0, 0(sp)
+			ldw s1, 4(sp)
+			addi sp, sp, 8
+
+			addi a0, zero, NONE
+			beq a0, v0, end_act
+			stw s1, T_X(zero)
+			stw s0, T_orientation(zero)
+			call end_act
 	res:
 		call reset_game
+		call end_act
 	
 	end_act:
-		ldw s0, 0(sp)
-		ldw s1, 4(sp)
-		ldw s2, 8(sp)
-		ldw s3, 12(sp)
-		ldw s4, 16(sp)
-		ldw s5, 20(sp)
-		ldw a0, 24(sp)
-		ldw ra, 28(sp)
-		addi sp, sp, 32
+		ldw ra, 0(sp)	
+		ldw s0, 4(sp)
+		ldw s1, 8(sp)
+		addi sp, sp, 12
 		ret
 ;END:act
 

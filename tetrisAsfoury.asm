@@ -70,17 +70,17 @@
 main:
 	addi sp, zero, LEDS
 	main_second_repeat:
-
 	add s0, zero, zero ; i = 0
 	addi s1, zero, 5   ; RATE = 5
 	call reset_game
 	main_first_repeat:  ; FIRST REPEAT FROM INSIDE
+	add s0, zero, zero ; i = 0
 	first_while:
 	beq s0, s1, end_first_while ; if s0 == RATE then done
 	addi a0, zero, FALLING       ; add a0 = FALLING
 	call draw_tetromino         ; draw tetromino in GSA
 	call draw_gsa               ; draw GSA on leds
-	call display_score ; i dont have this function
+	call display_score 
 	call wait
 	addi a0, zero, NOTHING ; remove tetromino from GSA
 	call draw_tetromino    ; redraw the tetromino in GSA
@@ -128,11 +128,11 @@ main:
 	call detect_collision
 	addi s5, zero, 3
 	bne v0, s5, draw_new_tetromino
-	call main ; if new tetromino overlaps with another we call main again and restart
+	call main_second_repeat ; if new tetromino overlaps with another we call main again and restart
 	draw_new_tetromino:
 	addi a0, zero, FALLING
 	call draw_tetromino
-	call main_second_repeat
+	call main_first_repeat
 	ret
 ;END:main
 
@@ -174,7 +174,7 @@ wait:
 	addi sp, sp, -4
 	stw ra, 0(sp)
 	addi t0, zero, 1
-	slli t0, t0, 4 ; set to 21 always <----------------- SET IT TO 21
+	slli t0, t0, 21 ; set to 21 always <----------------- SET IT TO 21
 	loop: 
 		beq t0, zero, done
 		addi t0, t0, -1
@@ -217,12 +217,16 @@ get_gsa:
 
 ;BEGIN:set_gsa
 set_gsa:
+	addi sp, sp, -4
+	stw ra, 0(sp)
 	add t0, zero, a0 ; x
 	add t1, zero, a1 ; y
 	slli t0, t0, 3 ; 8x
 	add t0, t0, t1 ; 8x + y
 	slli t0, t0, 2 ; (8x + y)* 4
 	stw a2, GSA (t0)
+	ldw ra, 0(sp)
+	addi sp, sp, 4
 	ret
 ;END:set_gsa
 ;BEGIN:draw_gsa
@@ -286,7 +290,7 @@ draw_tetromino:
 		ldw ra, 8(sp)
 		ldw s0, 4(sp)
 		ldw s1, 0(sp)
-		addi sp, sp, 8
+		addi sp, sp, 12
 		ret
 ;END:draw_tetromino
 
@@ -325,215 +329,199 @@ generate_tetromino:
 	ret
 ;END:generate_tetromino
 
-;BEGIN:detect_collision
+; BEGIN:detect_collision
 detect_collision:
-	
-	addi s0, zero, W_COL		
-	beq a0, s0, case_W
-	addi s0, zero, E_COL		
-	beq a0, s0, case_E
-	addi s0, zero, So_COL		
-	beq a0, s0, case_So
-	addi s0, zero, OVERLAP
-	beq a0, s0, case_ol
+	; Push ra
+	addi sp, sp, -4
+	stw ra, 0 (sp)
+	; -----------
+	; Push a0
+	addi sp, sp, -4
+	stw a0, 0 (sp)
+	; -----------
+	addi t0, zero, W_COL
+	beq a0, t0, W_COL_detect
+	addi t0, zero, E_COL
+	beq a0, t0, E_COL_detect
+	addi t0, zero, So_COL
+	beq a0, t0, So_COL_detect
+	addi t0, zero, OVERLAP
+	beq a0, t0, overlap_detect
+	W_COL_detect:
+	ldw t0, T_X (zero)
+	ldw t1, T_Y (zero)
+	; Push t0, t1
+	addi sp, sp, -4
+	stw t0, 0 (sp)
+	addi sp, sp, -4
+	stw t1, 0 (sp)
+	; -----------
+	addi t0, t0, -1
+	stw t0, T_X (zero)
+	jmpi detection
+	E_COL_detect:
+	ldw t0, T_X (zero)
+	ldw t1, T_Y (zero)
+	; Push t0, t1
+	addi sp, sp, -4
+	stw t0, 0 (sp)
+	addi sp, sp, -4
+	stw t1, 0 (sp)
+	; -----------
+	addi t0, t0, 1
+	stw t0, T_X (zero)
+	jmpi detection
+	So_COL_detect:
+	ldw t0, T_X (zero)
+	ldw t1, T_Y (zero)
+	; Push t0, t1
+	addi sp, sp, -4
+	stw t0, 0 (sp)
+	addi sp, sp, -4
+	stw t1, 0 (sp)
+	; -----------
+	addi t1, t1, 1
+	stw t1, T_Y (zero)
+	jmpi detection
+	overlap_detect:
+	ldw t0, T_X (zero)
+	ldw t1, T_Y (zero)
+	; Push t0, t1
+	addi sp, sp, -4
+	stw t0, 0 (sp)
+	addi sp, sp, -4
+	stw t1, 0 (sp)
+	; -----------
+	jmpi detection
+	detection:
+	; -------- draw_tetromino with check bound + call to get_gsa and check if PLACED ----------
+	ldw t0, T_orientation (zero) ; t0 = MEM[T_orientation]
+	slli t0, t0, 2 ; t1 = t1*4
+	ldw t1, T_type (zero) ; t1 = T_type
+	slli t1, t1, 4 ; t1 = t1*16
+	add t0, t0, t1 ; t0 = t0 + t1
+	ldw a0, T_X (zero) ; a0 = MEM[T_X]
+	ldw a1, T_Y (zero)	; a1 = MEM[T_Y]
+	; Push t0
+	addi sp, sp, -4
+	stw t0, 0 (sp)
+	; -----------
+	call in_gsa ; check bound
+	bne v0, zero, collision
+	call get_gsa ; get GSA for anchor point
+	addi t7, zero, PLACED
+	beq v0, t7, collision
+	; Pop t0
+	ldw t0, 0 (sp)
+	addi sp, sp, 4
+	; -----------
+	ldw a0, DRAW_Ax (t0) ; a0 = MEM[DRAW_Ax + t0]
+	ldw a1, DRAW_Ay (t0) ; a1 = MEM[DRAW_Ay + t0]
+	ldw a0, 0 (a0) ; a0 = MEM[a0]
+	ldw a1, 0 (a1) ; a1 = MEM[a1]
+	ldw t1, T_X (zero) ; t1 = MEM[T_X]
+	ldw t2, T_Y (zero)	; t2 = MEM[T_Y]
+	add a0, a0, t1 ; a0 = a0 + t1
+	add a1, a1, t2 ; a1 = a1 + t2
+	; Push t0
+	addi sp, sp, -4
+	stw t0, 0 (sp)
+	; -----------
+	call in_gsa ; check bound
+	bne v0, zero, collision
+	call get_gsa ; get GSA for point after
+	addi t7, zero, PLACED
+	beq v0, t7, collision
+	; Pop t0	
+	ldw t0, 0 (sp)
+	addi sp, sp, 4
+	; -----------
+	ldw a0, DRAW_Ax (t0) ; a0 = MEM[DRAW_Ax + t0]
+	ldw a1, DRAW_Ay (t0) ; a1 = MEM[DRAW_Ay + t0]
+	ldw a0, 4 (a0) ; a0 = MEM[a0 + 4]
+	ldw a1, 4 (a1) ; a1 = MEM[a1 + 4]
+	ldw t1, T_X (zero) ; t1 = MEM[T_X]
+	ldw t2, T_Y (zero)	; t2 = MEM[T_Y]
+	add a0, a0, t1 ; a0 = a0 + t1
+	add a1, a1, t2 ; a1 = a1 + t2
+	; Push t0
+	addi sp, sp, -4
+	stw t0, 0 (sp)
+	; -----------
+	call in_gsa ; check bound
+	bne v0, zero, collision
+	call get_gsa ; get GSA for point after
+	addi t7, zero, PLACED
+	beq v0, t7, collision
+	; Pop t0
+	ldw t0, 0 (sp)
+	addi sp, sp, 4
+	; -----------
+	ldw a0, DRAW_Ax (t0) ; a0 = MEM[DRAW_Ax + t0]
+	ldw a1, DRAW_Ay (t0) ; a1 = MEM[DRAW_Ay + t0]
+	ldw a0, 8 (a0) ; a0 = MEM[a0 + 8]
+	ldw a1, 8 (a1) ; a1 = MEM[a1 + 8]
+	ldw t1, T_X (zero) ; t1 = MEM[T_X]
+	ldw t2, T_Y (zero)	; t2 = MEM[T_Y]
+	add a0, a0, t1 ; a0 = a0 + t1
+	add a1, a1, t2 ; a1 = a1 + t2
+	; Push t0
+	addi sp, sp, -4
+	stw t0, 0 (sp)
+	; -----------
+	call in_gsa ; check bound
+	bne v0, zero, collision
+	call get_gsa ; get GSA for point after
+	addi t7, zero, PLACED
+	beq v0, t7, collision
+	; Pop t0
+	ldw t0, 0 (sp)
+	addi sp, sp, 4
+	; -----------
+	jmpi detect_collision_end
+	collision:
+	; Pop t0
+	ldw t0, 0 (sp)
+	addi sp, sp, 4
+	; -----------
+	; Pop t1, t0
+	ldw t1, 0 (sp)
+	addi sp, sp, 4
+	ldw t0, 0 (sp)
+	addi sp, sp, 4
+	; -----------
+	stw t0, T_X (zero) ; MEM[T_X] = t0
+	stw t1, T_Y (zero) ; MEM[T_Y] = t1
+	; Pop v0
+	ldw v0, 0 (sp)
+	addi sp, sp, 4
+	; -----------
+	; Pop ra
+	ldw ra, 0 (sp)
+	addi sp, sp, 4
+	; -----------
+	ret
+	detect_collision_end:
+	; Pop t1, t0
+	ldw t1, 0 (sp)
+	addi sp, sp, 4
+	ldw t0, 0 (sp)
+	addi sp, sp, 4
+	; -----------
+	stw t0, T_X (zero) ; MEM[T_X] = t0
+	stw t1, T_Y (zero) ; MEM[T_Y] = t1
 	addi v0, zero, NONE
-	call end_det_col
-
-	case_W:
-		addi sp, sp, -8
-		stw a0, 0(sp)						; type de la collision, argument de detect_collision
-		stw ra, 4(sp)
-		addi s0, zero, 4
-		addi a0, zero, 0					; loop index
-		loop_W:
-			beq a0, s0, end_det_col			; if loop index = 4 goto end_det_col
-			
-			call get_tetromino_pair_n  		;(v0,v1) la paire  a0 --> index of loop
-			addi v0, v0, -1
-	
-			addi sp, sp, -8
-			stw a0, 0(sp)					; save loop index to stack
-			stw a1, 4(sp)					; save a1 in case (???)
-					
-			add a0, v0, zero				; a0 = x - 1
-			add a1, v1, zero				; a1 = y
-			
-			addi sp, sp, -8
-			stw a0, 0(sp)					; push a0 = x - 1 to the stack
-			stw a1, 4(sp)					; push a1 = y to stack 
-			
-			call in_gsa
-			
-			ldw a0, 0(sp)					; reuse arguments for in_gsa to apply to get_gsa (in case modified)
-			ldw a1, 4(sp) 
-			addi sp, sp, 8
-
-			bne v0, zero, col_w				; if not in gsa --> collision
-			
-			call get_gsa					
-			addi t0, zero, 1
-			beq v0, t0, col_w				; if get_gsa = 1 --> collision
-
-			addi v0, zero, NONE				; default value for v0
-			
-			ldw a0, 0(sp)					; takes back loop index
-			ldw a1, 4(sp)					; takes back a1 initial value (not necessarily known)
-			addi sp, sp, 8
-			addi a0, a0, 1					; increment loop index
-			call loop_W
-			
-			col_w:
-				addi v0, zero, W_COL
-				call end_det_col
-	
-	case_E:
-		addi sp, sp, -8
-		stw a0, 0(sp)						; type de la collision, argument de detect_collision
-		stw ra, 4(sp)
-		addi s0, zero, 4
-		addi a0, zero, 0					; loop index
-		loop_E:
-			beq a0, s0, end_det_col			; if loop index = 4 goto end_det_col
-			
-			call get_tetromino_pair_n  		;(v0,v1) la paire  a0 --> index of loop
-			addi v0, v0, 1
-	
-			addi sp, sp, -8
-			stw a0, 0(sp)					; save loop index to stack
-			stw a1, 4(sp)					; save a1 in case (???)
-					
-			add a0, v0, zero				; a0 = x + 1
-			add a1, v1, zero				; a1 = y
-			
-			addi sp, sp, -8
-			stw a0, 0(sp)					; push a0 = x + 1 to the stack
-			stw a1, 4(sp)					; push a1 = y to stack 
-			
-			call in_gsa
-			
-			ldw a0, 0(sp)					; reuse arguments for in_gsa to apply to get_gsa (in case modified)
-			ldw a1, 4(sp) 
-			addi sp, sp, 8
-
-			bne v0, zero, col_e				; if not in gsa --> collision
-			
-			call get_gsa					
-			addi t0, zero, 1
-			beq v0, t0, col_e				; if get_gsa = 1 --> collision
-
-			addi v0, zero, NONE				; default value for v0
-			
-			ldw a0, 0(sp)					; takes back loop index
-			ldw a1, 4(sp)					; takes back a1 initial value (not necessarily known)
-			addi sp, sp, 8
-			addi a0, a0, 1					; increment loop index
-			call loop_E
-			
-			col_e:
-				addi v0, zero, E_COL
-				call end_det_col
-
-	case_So:
-		addi sp, sp, -8
-		stw a0, 0(sp)						; type de la collision, argument de detect_collision
-		stw ra, 4(sp)
-		addi s0, zero, 4
-		addi a0, zero, 0					; loop index
-		loop_So:
-			beq a0, s0, end_det_col			; if loop index = 4 goto end_det_col
-			
-			call get_tetromino_pair_n  		;(v0,v1) la paire  a0 --> index of loop
-			addi v1, v1, 1
-	
-			addi sp, sp, -8
-			stw a0, 0(sp)					; save loop index to stack
-			stw a1, 4(sp)					; save a1 in case (???)
-					
-			add a0, v0, zero				; a0 = x
-			add a1, v1, zero				; a1 = y + 1
-			
-			addi sp, sp, -8
-			stw a0, 0(sp)					; push a0 = x to the stack
-			stw a1, 4(sp)					; push a1 = y + 1 to stack 
-			
-			call in_gsa
-			
-			ldw a0, 0(sp)					; reuse arguments for in_gsa to apply to get_gsa (in case modified)
-			ldw a1, 4(sp) 
-			addi sp, sp, 8
-
-			bne v0, zero, col_So			; if not in gsa --> collision
-			
-			call get_gsa					
-			addi t0, zero, 1
-			beq v0, t0, col_So				; if get_gsa = 1 --> collision
-
-			addi v0, zero, NONE				; default value for v0
-			
-			ldw a0, 0(sp)					; takes back loop index
-			ldw a1, 4(sp)					; takes back a1 initial value (not necessarily known)
-			addi sp, sp, 8
-			addi a0, a0, 1					; increment loop index
-			call loop_So
-			
-			col_So:
-				addi v0, zero, So_COL
-				call end_det_col
-
-
-	case_ol:
-		addi sp, sp, -8
-		stw a0, 0(sp)						; type de la collision, argument de detect_collision
-		stw ra, 4(sp)
-		addi s0, zero, 4
-		addi a0, zero, 0					; loop index
-		loop_ol:
-			beq a0, s0, end_det_col			; if loop index = 4 goto end_det_col
-			
-			call get_tetromino_pair_n  		;(v0,v1) la paire  a0 --> index of loop
-	
-			addi sp, sp, -8
-			stw a0, 0(sp)					; save loop index to stack
-			stw a1, 4(sp)					; save a1 in case (???)
-					
-			add a0, v0, zero				; a0 = x - 1
-			add a1, v1, zero				; a1 = y
-			
-			addi sp, sp, -8
-			stw a0, 0(sp)					; push a0 = x - 1 to the stack
-			stw a1, 4(sp)					; push a1 = y to stack 
-			
-			call in_gsa
-			
-			ldw a0, 0(sp)					; reuse arguments for in_gsa to apply to get_gsa (in case modified)
-			ldw a1, 4(sp) 
-			addi sp, sp, 8
-
-			bne v0, zero, col_ol			; if not in gsa --> collision
-			
-			call get_gsa					
-			addi t0, zero, 1
-			beq v0, t0, col_ol				; if get_gsa = 1 --> collision
-
-			addi v0, zero, NONE				; default value for v0
-			
-			ldw a0, 0(sp)					; takes back loop index
-			ldw a1, 4(sp)					; takes back a1 initial value (not necessarily known)
-			addi sp, sp, 8
-			addi a0, a0, 1					; increment loop index
-			call loop_ol
-			
-			col_ol:
-				addi v0, zero, OVERLAP
-				call end_det_col
-
-	end_det_col:
-		ldw a0, 0(sp)
-		ldw ra, 4(sp)
-		addi sp, sp, 8
-		ret
-
+	; Pop a0
+	ldw a0, 0 (sp)
+	addi sp, sp, 4
+	; -----------
+	; Pop ra
+	ldw ra, 0 (sp)
+	addi sp, sp, 4
+	; -----------
+	ret
 ;END:detect_collision
+
 
 ;BEGIN:rotate_tetromino
 rotate_tetromino:
@@ -837,27 +825,37 @@ remove_full_line:
 
 ;BEGIN:reset_game
 reset_game:
-	addi sp, sp, -20
+	addi sp, sp, -24
 	stw s0, 0(sp)
 	stw s1, 4(sp)
 	stw s2, 8(sp)
 	stw s3, 12(sp)
 	stw ra, 16(sp)
+	stw s4, 20(sp)
 
 	; set score to 0
 	addi s0, zero, 0
 	stw s0, SCORE(zero)		
 	call display_score		; all 7-seg displays show zero
 
-	addi s1, zero, 97		; s1 = 97
-	addi s2, zero, 0
-	reset_gsa:				; reset whole gsa
-		beq s1, s2, end_res_gsa
-		slli s3, s2, 2
-		addi s3, s3, GSA
-		ldw zero, 0(s3)
+	addi s1, zero, 12		; s1 = 12 = xfinal
+	addi s2, zero, 0        ; s2 = 0 = x
+	addi s3, zero, 8        ; s3 = 8 = yfina;
+
+	reset_gsa_x:				; reset whole gsa
+		beq s1, s2, end_res_gsa  ; x = 12 => end
+		addi s4, zero, 0  ; reset y = 0
+		reset_gsa_y:
+		beq s4, s3, incX_res_gsa ; y = 8 => incX
+		add a0, s2, zero
+		add a1, s4, zero
+		addi a2, zero, NOTHING
+		call set_gsa ; set_gsa to nothing
+		addi s4, s4, 1
+		call reset_gsa_y
+		incX_res_gsa:
 		addi s2, s2, 1
-		call reset_gsa
+		call reset_gsa_x
 
 	end_res_gsa:
 	
@@ -865,6 +863,7 @@ reset_game:
 	call generate_tetromino
 	
 	addi a0, zero, FALLING
+	call draw_tetromino
 	call draw_gsa
 	
 	ldw s0, 0(sp)
@@ -872,7 +871,8 @@ reset_game:
 	ldw s2, 8(sp)
 	ldw s3, 12(sp)
 	ldw ra, 16(sp)
-	addi sp, sp, 20
+	ldw s4, 20(sp)
+	addi sp, sp, 24
 	ret
 ;END:reset_game
 
